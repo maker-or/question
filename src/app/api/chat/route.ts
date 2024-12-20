@@ -60,7 +60,7 @@ export async function POST(req: Request): Promise<Response> {
     const final_prompt = `
       Context: ${context}\n
       Query: ${query}\n
-      Create a semester-end examination paper for a prestigious university from the given context.rember to genrate only Questions.
+      Answer the given question based on the context provided in detail. Marks allocted for this question 10 marks and Cite the book name at the end of quries.
     `;
 
     console.log("Final Prompt:", final_prompt);

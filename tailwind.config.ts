@@ -8,6 +8,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+				
+				serif: ['Instrument Serif', 'serif'], // Instrument_Serif as font-serif
+			  },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
