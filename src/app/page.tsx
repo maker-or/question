@@ -543,7 +543,7 @@ export default function Page() {
       <div className="fixed bottom-1 right-1 z-10">
         <button
           onClick={toggleActionButtons}
-          className={`flex items-center justify-center gap-2 rounded-full ${showActionButtons ? 'bg-[#48AAFF]' : 'bg-[#f7eee31c]'} p-3 text-white hover:bg-[#48AAFF] transition-all duration-300`}
+          className={`flex items-center justify-center gap-2 rounded-full ${showActionButtons ? 'bg-[#48AAFF]' : 'bg-[#151515]'} p-3 text-white hover:bg-[#48AAFF] transition-all duration-300`}
         >
           {/* <Sparkle className={showActionButtons ? 'text-white' : ''} /> */}
           <Sparkles  className={showActionButtons ? 'text-white' : ''}/>
@@ -552,7 +552,7 @@ export default function Page() {
       
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-screen">
-          <h1 className="text-[3em]  text-[#f7eee3ca] mb-8 font-serif">Your Study Assistant <span className="text-[#48AAFF]">.</span></h1>
+          <h1 className="text-[3em]  text-[#f7eee3ca] mb-8 font-serif">What do you want to learn? </h1>
           <div className="w-full max-w-2xl px-4">
             <form onSubmit={onSubmit} className="w-full">
               <div className="group flex w-full items-center rounded-2xl border border-[#f7eee332] bg-gradient-to-r from-[#2f2f2f] to-[#454444] p-1 shadow-lg backdrop-blur-sm transition-all duration-300">
