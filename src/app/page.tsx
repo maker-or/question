@@ -69,16 +69,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
 
   // Ensure proper spacing for lists and headings
   sanitizedContent = sanitizedContent
-    // Add space before headings if not already there
+
     .replace(/\n(#{1,6}\s)/g, "\n\n$1")
-    // Ensure proper spacing for lists
     .replace(/\n([*-]\s)/g, "\n\n$1")
-    // Fix numbered lists
     .replace(/\n(\d+\.\s)/g, "\n\n$1")
-    // Insert an extra blank line after each paragraph
     .replace(/(\n\s*\n)/g, "$1\n");
 
-  // Pre-process code blocks for better formatting
+
   sanitizedContent = sanitizedContent.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
     const codeContent = code.trim();
     let formatted = codeContent;
@@ -103,15 +100,12 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
       // Preserve newlines in display math
       return `\n\n$$${math}$$\n\n`;
     })
-    // Handle inline math delimiters properly
-    .replace(/\\\(/g, "$") // Convert \( to $
-    .replace(/\\\)/g, "$") // Convert \) to $
-    // Protect vector notation and other LaTeX commands
+   
+    .replace(/\\\(/g, "$") 
+    .replace(/\\\)/g, "$")
     .replace(/\\vec\{([^}]*)\}/g, "\\vec{$1}")
     .replace(/\\sum_\{([^}]*)\}\^\{([^}]*)\}/g, "\\sum_{$1}^{$2}")
-    // Ensure inline math expressions are preserved correctly
     .replace(/\$([^$\n]+?)\$/g, (match) => {
-      // Remove extra spaces that might interfere with LaTeX parsing
       return match.replace(/\s+/g, ' ');
     });
 
@@ -121,17 +115,17 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         remarkPlugins={[
           remarkGfm, 
           [remarkMath, { 
-            singleDollarTextMath: true,   // Enable $ for inline math
-            doubleBacktickMathDisplay: false  // Only $$ for display math
+            singleDollarTextMath: true,   
+            doubleBacktickMathDisplay: false  
           }],
           // [remarkFootnotes, { inlineNotes: true }]
         ]}
         rehypePlugins={[
           [rehypeKatex, {
-            // KaTeX options for better math rendering
-            strict: false,  // Don't throw on parse error
-            trust: true,    // Allow some commands that could be unsafe
-            macros: {       // Define common macros
+           
+            strict: false,  
+            trust: true,    
+            macros: {       
               "\\vec": "\\overrightarrow{#1}"
             }
           }], 
@@ -143,7 +137,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         components={{
           code({node, className, children, ...props}) {
             const match = /language-(\w+)/.exec(className || '');
-            // Fix the SyntaxHighlighter type issue by excluding the ref
+            
             const { ref, ...restProps } = props as any;
             return   match ? (
               <SyntaxHighlighter
@@ -216,14 +210,12 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   );
 };
 
-// -------------------------------------------------------------------------
-// Types
-// -------------------------------------------------------------------------
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  model?: string; // Add model field to track which model generated the response
+  model?: string; 
 }
 
 interface VisionText {
@@ -253,9 +245,7 @@ const MODEL_OPTIONS = [
   { id: "deepseek/deepseek-chat:free", name: "DeepSeek v3" }
 ];
 
-// -------------------------------------------------------------------------
-// Main Page Component
-// -------------------------------------------------------------------------
+
 export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [isWebSearchLoading, setIsWebSearchLoading] = useState(false);
@@ -263,7 +253,7 @@ export default function Page() {
   const [lastQuery, setLastQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>(
-    "google/gemini-2.0-flash-lite-preview-02-05:free"
+    "google/gemini-2.0-pro-exp-02-05:free"
   );
   const [showModelSelector, setShowModelSelector] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -310,9 +300,7 @@ export default function Page() {
     setHideTimeout(timeout);
   };
 
-  // -----------------------------------------------------------------------
-  // Load previous session data (if any)
-  // -----------------------------------------------------------------------
+
   useEffect(() => {
     const storedChatId = localStorage.getItem("chatId");
     if (storedChatId) {
@@ -1058,13 +1046,13 @@ export default function Page() {
 
 
 
-                  <button
+                  {/* <button
                     type="button"
                     onClick={toggleVoiceMode}
                     className={`flex m-1 p-3 rounded-lg ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee3]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
                   >
                     {isVoiceMode ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </button>
+                  </button> */}
                 </div>
 
               </div>
@@ -1254,7 +1242,7 @@ export default function Page() {
                     </button>  */}
 
                     {/* Voice recording button (only when in voice mode) */}
-                    {isVoiceMode && (
+                    {/* {isVoiceMode && (
                       <button
                         type="button"
                         onClick={isRecording ? stopRecording : startRecording}
@@ -1262,7 +1250,7 @@ export default function Page() {
                       >
                         {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                       </button>
-                    )}
+                    )} */}
 
                     {/* Canvas button */}
 
@@ -1320,13 +1308,13 @@ export default function Page() {
 
 
 
-                  <button
+                  {/* <button
                     type="button"
                     onClick={toggleVoiceMode}
                     className={`flex m-1 p-2 rounded-lg ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee3]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
                   >
                     {isVoiceMode ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </button>
+                  </button> */}
                 </div>
 
               </div>
