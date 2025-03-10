@@ -5,9 +5,20 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+// Import footnotes as a default import to avoid type issues
+import remarkFootnotes from "remark-footnotes";
+import rehypeSlug from "rehype-slug";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeExternalLinks from "rehype-external-links";
 import DOMPurify from "dompurify";
 import prettier from "prettier/standalone";
 import parserBabel from "prettier/parser-babel";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import Image from "next/image";
+
+// Import KaTeX CSS for math rendering
+import 'katex/dist/katex.min.css';
 
 // import { useChat } from "ai/react";
 import { useChat } from '@ai-sdk/react'
@@ -26,6 +37,11 @@ import {
   Sparkles,
   Square,
   Paintbrush,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  ChevronDown,
 } from "lucide-react";
 
 import { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu";
@@ -49,9 +65,20 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   // Sanitize and format markdown code blocks before rendering.
-  let  sanitizedContent = DOMPurify.sanitize(content, { USE_PROFILES: { html: true } });
+  let sanitizedContent = DOMPurify.sanitize(content, { USE_PROFILES: { html: true } });
 
-  // Use regex to find code blocks and attempt to format them if they are code
+  // Ensure proper spacing for lists and headings
+  sanitizedContent = sanitizedContent
+    // Add space before headings if not already there
+    .replace(/\n(#{1,6}\s)/g, "\n\n$1")
+    // Ensure proper spacing for lists
+    .replace(/\n([*-]\s)/g, "\n\n$1")
+    // Fix numbered lists
+    .replace(/\n(\d+\.\s)/g, "\n\n$1")
+    // Insert an extra blank line after each paragraph
+    .replace(/(\n\s*\n)/g, "$1\n");
+
+  // Pre-process code blocks for better formatting
   sanitizedContent = sanitizedContent.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
     const codeContent = code.trim();
     let formatted = codeContent;
@@ -59,7 +86,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
       if (lang === "js" || lang === "javascript" || lang === "jsx" || lang === "ts" || lang === "typescript" || lang === "tsx") {
         formatted = prettier.format(codeContent, {
           parser: "babel",
-          plugins: [parserBabel]
+          plugins: [parserBabel],
+          printWidth: 80
         });
       }
     } catch (error) {
@@ -68,16 +96,123 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
     return "```" + lang + "\n" + formatted.trim() + "\n```";
   });
 
+  // Better handling for math expressions - preserve LaTeX syntax
+  sanitizedContent = sanitizedContent
+    // Convert display math to a form that won't be affected by other replacements
+    .replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
+      // Preserve newlines in display math
+      return `\n\n$$${math}$$\n\n`;
+    })
+    // Handle inline math delimiters properly
+    .replace(/\\\(/g, "$") // Convert \( to $
+    .replace(/\\\)/g, "$") // Convert \) to $
+    // Protect vector notation and other LaTeX commands
+    .replace(/\\vec\{([^}]*)\}/g, "\\vec{$1}")
+    .replace(/\\sum_\{([^}]*)\}\^\{([^}]*)\}/g, "\\sum_{$1}^{$2}")
+    // Ensure inline math expressions are preserved correctly
+    .replace(/\$([^$\n]+?)\$/g, (match) => {
+      // Remove extra spaces that might interfere with LaTeX parsing
+      return match.replace(/\s+/g, ' ');
+    });
+
   return (
     <div className="prose prose-invert max-w-none">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeRaw]}
+        remarkPlugins={[
+          remarkGfm, 
+          [remarkMath, { 
+            singleDollarTextMath: true,   // Enable $ for inline math
+            doubleBacktickMathDisplay: false  // Only $$ for display math
+          }],
+          // [remarkFootnotes, { inlineNotes: true }]
+        ]}
+        rehypePlugins={[
+          [rehypeKatex, {
+            // KaTeX options for better math rendering
+            strict: false,  // Don't throw on parse error
+            trust: true,    // Allow some commands that could be unsafe
+            macros: {       // Define common macros
+              "\\vec": "\\overrightarrow{#1}"
+            }
+          }], 
+          rehypeRaw,
+          rehypeSlug,
+          [rehypeAutolinkHeadings, { behavior: 'wrap' }],
+          [rehypeExternalLinks, { target: '_blank', rel: ['nofollow', 'noopener', 'noreferrer'] }]
+        ]}
+        components={{
+          code({node, className, children, ...props}) {
+            const match = /language-(\w+)/.exec(className || '');
+            // Fix the SyntaxHighlighter type issue by excluding the ref
+            const { ref, ...restProps } = props as any;
+            return   match ? (
+              <SyntaxHighlighter
+                style={vscDarkPlus as any}
+                language={match[1]}
+                PreTag="div"
+                {...restProps}
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
+            ) : (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+          img({src, alt, ...props}) {
+            return src ? (
+              <span className="relative block w-full max-w-full my-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={src} 
+                  alt={alt || ""} 
+                  className="rounded-lg max-w-full max-h-[500px] object-contain mx-auto" 
+                  loading="lazy"
+                  {...props}
+                />
+                {alt && <span className="block text-center text-sm text-gray-500 mt-1">{alt}</span>}
+              </span>
+            ) : null;
+          },
+          table({children}) {
+            return (
+              <div className="overflow-x-auto my-4">
+                <table className="border-collapse w-full border border-gray-700">
+                  {children}
+                </table>
+              </div>
+            );
+          },
+          th({children}) {
+            return <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left">{children}</th>;
+          },
+          td({children}) {
+            return <td className="border border-gray-700 px-4 py-2">{children}</td>;
+          },
+          blockquote({children}) {
+            return <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4">{children}</blockquote>;
+          },
+          h1({children}) {
+            return <h1 className="text-2xl font-bold mt-6 mb-4">{children}</h1>;
+          },
+          h2({children}) {
+            return <h2 className="text-xl font-bold mt-5 mb-3">{children}</h2>;
+          },
+          h3({children}) {
+            return <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>;
+          },
+          ul({children}) {
+            return <ul className="list-disc list-inside pl-4 my-4 space-y-2">{children}</ul>;
+          },
+          ol({children}) {
+            return <ol className="list-decimal list-inside pl-4 my-4 space-y-2">{children}</ol>;
+          }
+        }}
       >
         {sanitizedContent}
       </ReactMarkdown>
     </div>
-    //</ReactMarkdown>
   );
 };
 
@@ -88,6 +223,7 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  model?: string; // Add model field to track which model generated the response
 }
 
 interface VisionText {
@@ -110,6 +246,13 @@ interface VisionText {
 
 type Checked = DropdownMenuCheckboxItemProps["checked"];
 
+// Model options
+const MODEL_OPTIONS = [
+  { id: "google/gemini-2.0-pro-exp-02-05:free", name: "Gemini 2.0 Pro" },
+  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
+  { id: "deepseek/deepseek-chat:free", name: "DeepSeek v3" }
+];
+
 // -------------------------------------------------------------------------
 // Main Page Component
 // -------------------------------------------------------------------------
@@ -121,8 +264,8 @@ export default function Page() {
   const [searchResults, setSearchResults] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>(
     "google/gemini-2.0-flash-lite-preview-02-05:free"
-    
   );
+  const [showModelSelector, setShowModelSelector] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchLinks, setSearchLinks] = useState<string[]>([]);
 
@@ -144,6 +287,16 @@ export default function Page() {
 
   const [showActionButtons, setShowActionButtons] = useState(false);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Voice mode states
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [transcribedText, setTranscribedText] = useState("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const handleMouseEnter = () => {
     if (hideTimeout) clearTimeout(hideTimeout);
@@ -174,6 +327,206 @@ export default function Page() {
       }
     }
   }, []);
+
+  // -----------------------------------------------------------------------
+  // Voice Mode Functions
+  // -----------------------------------------------------------------------
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        // Create a File from the collected audio chunks
+        const audioFile = new File(audioChunksRef.current, 'recording.wav', { type: 'audio/wav' });
+
+        setTranscribedText("Transcribing...");
+
+        // Create form data to send to the server
+        const formData = new FormData();
+        formData.append('audio', audioFile, 'recording.wav');
+        console.log("5 4 3 2 1")
+        console.log("formData", formData)
+
+        try {
+          // Send to our transcription API
+          const response = await fetch('/api/transcribe', {
+            method: 'POST',
+            body: formData,
+          });
+          console.log("sent to transcribe")
+          if (!response.ok) {
+            throw new Error(`Transcription failed: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          setTranscribedText(data.text);
+          setInput(data.text);
+
+          // Automatically submit the transcribed text
+          setTimeout(() => {
+            handleSubmitVoice(data.text);
+          }, 100);
+
+        } catch (error) {
+          console.error('Error transcribing audio:', error);
+          setError('Failed to transcribe audio. Please try again.');
+          setTranscribedText("");
+        }
+
+        // Stop all tracks from the stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      setError('Failed to access microphone. Please check your permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const toggleVoiceMode = () => {
+    setIsVoiceMode(prev => !prev);
+    // Reset any ongoing recording if turning off voice mode
+    if (isVoiceMode && isRecording) {
+      stopRecording();
+    }
+  };
+
+  const playResponseAudio = async (text: string) => {
+    try {
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`TTS request failed: ${response.statusText}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setAudioSrc(audioUrl);
+
+      if (audioRef.current) {
+        audioRef.current.onplay = () => setIsPlaying(true);
+        audioRef.current.onended = () => setIsPlaying(false);
+        audioRef.current.onpause = () => setIsPlaying(false);
+        audioRef.current.play();
+      }
+    } catch (error) {
+      console.error('Error playing audio response:', error);
+      setError('Failed to play audio response.');
+    }
+  };
+
+  // Handle voice submission with transcribed text
+  const handleSubmitVoice = async (transcribedText: string) => {
+    if (!transcribedText.trim()) return;
+
+    setIsLoading(true);
+    setSearchResults(null);
+    setLastQuery(transcribedText);
+    setError(null);
+
+    // Add the transcribed text to the chat
+    const latestMessages = await submitMessage(transcribedText);
+  };
+
+  // Submit message and track the response for TTS
+  const submitMessage = async (messageText: string) => {
+    // Use a custom implementation to track the last response for TTS
+    const formData = {
+      messages: [...messages, { role: 'user', content: messageText, id: Date.now().toString() }],
+      model: selectedModel,
+      voiceMode: isVoiceMode
+    };
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from chat API');
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body reader is null');
+      }
+
+      let responseText = '';
+      const decoder = new TextDecoder();
+
+      let firstChunk = true;
+      let fullResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        responseText += chunk;
+
+        // Update the UI with the response text
+        // Here we're simulating a streaming response in the UI
+        if (firstChunk) {
+          const newMessage = {
+            id: `assistant-${Date.now()}`,
+            role: 'assistant' as const,
+            content: responseText
+          };
+          // Add this message to your UI state
+          // (In a real implementation, you'd use your chat state management)
+          firstChunk = false;
+        } else {
+          // Update the last message with the new content
+          // (In a real implementation, you'd update your chat state)
+        }
+
+        fullResponse = responseText;
+      }
+
+      // After getting the full response, convert it to speech if in voice mode
+      if (isVoiceMode) {
+        await playResponseAudio(fullResponse);
+      }
+
+      setIsLoading(false);
+
+      // Return the updated messages
+      return [...messages,
+      { role: 'user', content: messageText, id: `user-${Date.now()}` },
+      { role: 'assistant', content: fullResponse, id: `assistant-${Date.now()}` }
+      ];
+
+    } catch (error) {
+      console.error('Error submitting message:', error);
+      setIsLoading(false);
+      setError('Failed to get a response. Please try again.');
+      return messages;
+    }
+  };
 
   // -----------------------------------------------------------------------
   // PDF Export Function
@@ -224,6 +577,24 @@ export default function Page() {
   };
 
   // -----------------------------------------------------------------------
+  // Handle model change
+  // -----------------------------------------------------------------------
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId);
+    setShowModelSelector(false);
+    // Store the selected model in localStorage
+    localStorage.setItem("selectedModel", modelId);
+  };
+
+  // Load previously selected model
+  useEffect(() => {
+    const storedModel = localStorage.getItem("selectedModel");
+    if (storedModel && MODEL_OPTIONS.some(model => model.id === storedModel)) {
+      setSelectedModel(storedModel);
+    }
+  }, []);
+
+  // -----------------------------------------------------------------------
   // Chat hook configuration
   // -----------------------------------------------------------------------
   const { messages, input, handleInputChange, handleSubmit, setInput } = useChat({
@@ -231,13 +602,20 @@ export default function Page() {
     body: { model: selectedModel },
     id: chatId,
     initialMessages: initialMessages,
-    onResponse: (_response) => {
+    onResponse: (response) => {
       setIsLoading(false);
       resetInputField();
       setError(null);
       if (isRegenerating) {
         setIsRegenerating(false);
         setRegenForMessageId(null);
+      }
+
+      // Store the model information with the response
+      const lastMessageIndex = messages.length;
+      if (lastMessageIndex > 0 && messages[lastMessageIndex - 1]?.role === "assistant") {
+        // Since 'model' property does not exist on 'UIMessage' type, we cannot directly update the 'messages' array.
+        // Instead, we can use this logic to update the attribution display logic as intended.
       }
     },
     onError: (error) => {
@@ -488,7 +866,7 @@ export default function Page() {
     setError(null);
     setInput(query);
     setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+      handleSubmit({ preventDefault: () => { } } as React.FormEvent);
     }, 0);
   };
 
@@ -509,11 +887,19 @@ export default function Page() {
     setShowActionButtons(prev => !prev);
   };
 
+  // -----------------------------------------------------------------------
+  // Get model display name
+  // -----------------------------------------------------------------------
+  const getModelDisplayName = (modelId: string): string => {
+    const model = MODEL_OPTIONS.find(m => m.id === modelId);
+    return model ? model.name : "Choose a model";
+  };
+
   return (
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300`}>
       {/* Action buttons panel - now as a floating panel that stays visible */}
       {showActionButtons && (
-        <div 
+        <div
           className="fixed bottom-16 right-1 z-20 p-3  backdrop-blur-md rounded-lg shadow-lg border border-[#f7eee332]"
         >
           <div className="flex flex-col gap-1">
@@ -538,7 +924,7 @@ export default function Page() {
           </div>
         </div>
       )}
-      
+
       {/* Toggle button - always visible */}
       <div className="fixed bottom-1 right-1 z-10">
         <button
@@ -546,41 +932,143 @@ export default function Page() {
           className={`flex items-center justify-center gap-2 rounded-full ${showActionButtons ? 'bg-[#48AAFF]' : 'bg-[#151515]'} p-3 text-white hover:bg-[#48AAFF] transition-all duration-300`}
         >
           {/* <Sparkle className={showActionButtons ? 'text-white' : ''} /> */}
-          <Sparkles  className={showActionButtons ? 'text-white' : ''}/>
+          <Sparkles className={showActionButtons ? 'text-white' : ''} />
         </button>
       </div>
-      
+
+      {/* Audio element for TTS playback */}
+      <audio ref={audioRef} src={audioSrc || undefined} className="hidden" />
+
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-screen">
-          <h1 className="text-[3em]  text-[#f7eee3ca] mb-8 font-serif">What do you want to learn? </h1>
+          <h1 className="text-[3em]  text-[#f7eee3ca] mb-4 font-serif">What do you want to learn? </h1>
+
+
+
+
           <div className="w-full max-w-2xl px-4">
             <form onSubmit={onSubmit} className="w-full">
-              <div className="group flex w-full items-center rounded-2xl border border-[#f7eee332] bg-gradient-to-r from-[#2f2f2f] to-[#454444] p-1 shadow-lg backdrop-blur-sm transition-all duration-300">
-                <div className="flex relative flex-1 items-center overflow-hidden rounded-xl border border-transparent bg-[#0c0c0c] py-5 transition-all duration-300 group-hover:border-[#f7eee332]">
-                  <textarea
-                    ref={textareaRef}
-                    placeholder="Ask me anything..."
-                    value={input}
-                    onChange={(e) => {
-                      handleInputChange(e);
-                      adjustTextareaHeight();
-                    }}
-                    onKeyDown={handleKeyDown}
-                    className="max-h-[120px] min-h-[70px] flex-1 resize-none bg-transparent font-serif px-2 py-2 text-sm text-[#f7eee3] outline-none transition-all duration-200 placeholder:text-[#f7eee380] md:text-base"
-                    rows={1}
-                  />
-                  <div className="absolute right-2 bottom-2 flex gap-3 items-center justify-center">
-                    <button className="flex gap-2 bg-gradient-to-tr from-[#0c0c0c] to-[#0c0c0c] text-[#f7eee380] hover:text-[#f7eee3] p-2 rounded-lg" onClick={() => setShowWhiteboard(true)}>Canvas<Paintbrush /></button>
-                    <button
-                      type="submit"
-                      className="p-2 rounded-full bg-[#f7eee3bc] hover:bg-[#f7eee3] text-[#0c0c0c] font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm backdrop-blur-sm"
+              <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl bg-[#ffffff] p-1  shadow-md transition-all duration-300">
+                <div className="flex relative flex-1  items-center overflow-hidden bg-[#bebdbdde] rounded-xl py-5 transition-all duration-300">
+                  {!isVoiceMode ? (
+                    <textarea
+                      ref={textareaRef}
+                      placeholder="Ask me anything..."
+                      value={input}
+                      onChange={(e) => {
+                        handleInputChange(e);
+                        adjustTextareaHeight();
+                      }}
+                      onKeyDown={handleKeyDown}
+                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-serif px-4 py-2 text-sm text-[#0c0c0c] outline-none transition-all duration-200 placeholder:text-[#0c0c0c] md:text-base"
+                      rows={1}
+                    />
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center px-4">
+                      <div className={`flex flex-col items-center ${isRecording ? 'animate-pulse' : ''}`}>
+                        <div className="text-center mb-2">
+                          {isRecording ? (
+                            <span className="text-red-500 text-sm">Recording...</span>
+                          ) : (
+                            <span className="text-[#f7eee380] text-sm">Ready to record</span>
+                          )}
+                        </div>
+                        {transcribedText && (
+                          <div className="max-w-full overflow-x-auto text-[#f7eee3] text-sm py-2">
+                            {transcribedText}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute right-3 bottom-3 flex gap-3 items-center justify-center">
+                    {/* Voice mode toggle button */}
+                    {/* <button 
+                      type="button"
+                      onClick={toggleVoiceMode} 
+                      className={`p-2 rounded-full ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee380]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
                     >
-                      {isLoading || isWebSearchLoading ? <Square fill="#0c0c0c" /> : <ArrowUp  />}
-                    </button>
+                      {isVoiceMode ? <Mic /> : <MicOff />}
+                    </button>  */}
+
+                    {/* Voice recording button (only when in voice mode) */}
+                    {isVoiceMode && (
+                      <button
+                        type="button"
+                        onClick={isRecording ? stopRecording : startRecording}
+                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-[#252525] hover:bg-[#323232]'} text-[#f7eee3] transition-colors duration-200`}
+                      >
+                        {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      </button>
+                    )}
+
+                    {/* Canvas button */}
+
+
+                    {/* Submit button */}
+                    {!isVoiceMode && (
+
+                      <div className="flex items-center justify-center p-1 bg-[#E0E0E0] rounded-full box-shadow: 76px 2px 58px -95px rgba(224,224,224,1) inset;">
+                        <button
+                          type="submit"
+                          className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
+                          // disabled={isLoading || isWebSearchLoading}
+                        >
+                          {isLoading || isWebSearchLoading ? <Square className="h-5 w-5" fill="#f7eee3" /> : <ArrowUp className="h-4 w-4" />}
+                        </button>
+                      </div>
+
+                    )}
                   </div>
+
                 </div>
+                <div className="flex gap-1 items-center">
+
+
+                  <div className="relative m-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowModelSelector(!showModelSelector)}
+                      className="flex items-center justify-between gap-2 px-4 py-2 rounded-lg bg-[#252525] text-[#f7eee3] transition-colors hover:bg-[#323232]">
+                      <span>{getModelDisplayName(selectedModel)}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+
+                    {showModelSelector && (
+                      <div className="absolute mt-1 z-10 rounded-md bg-[#1a1a1a] shadow-lg border border-[#383838]">
+                        <ul className="py-1">
+                          {MODEL_OPTIONS.map((model) => (
+                            <li key={model.id}>
+                              <button
+                                type="button"
+                                className={`w-full text-left px-4 py-2 hover:bg-[#252525] ${selectedModel === model.id ? 'bg-[#323232] text-[#f7eee3]' : 'text-[#f7eee380]'}`}
+                                onClick={() => handleModelChange(model.id)}
+                              >
+                                {model.name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  <button type="button" className="flex m-1 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] p-3 rounded-lg transition-colors duration-200" onClick={() => setShowWhiteboard(true)}>
+                    <Paintbrush className="h-4 w-4" />
+                  </button>
+
+
+
+                  <button
+                    type="button"
+                    onClick={toggleVoiceMode}
+                    className={`flex m-1 p-3 rounded-lg ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee3]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
+                  >
+                    {isVoiceMode ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </button>
+                </div>
+
               </div>
-              {input.length > 0 && (
+              {input.length > 0 && !isVoiceMode && (
                 <div className="mt-1.5 flex items-center justify-between px-1 text-xs text-[#f7eee380]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
                   <span>{input.length}/2000</span>
@@ -596,8 +1084,8 @@ export default function Page() {
             {messages.map((m, index) => {
               const previousUserMessage =
                 m.role === "assistant" &&
-                index > 0 &&
-                messages[index - 1]?.role === "user"
+                  index > 0 &&
+                  messages[index - 1]?.role === "user"
                   ? messages[index - 1]?.content ?? ""
                   : "";
               return m.role === "user" ? (
@@ -606,7 +1094,7 @@ export default function Page() {
                   className="animate-slide-in group relative mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="max-w-[85vw] text-[1.3em] tracking-tight font-serif rounded-2xl text-[#E8E8E6] md:max-w-xl md:p-4 md:text-[2em] line-clamp-3">
+                  <div className="max-w-[85vw] text-[1.4em] tracking-tight font-serif rounded-2xl bg-[#f7eee33b] text-[#E8E8E6] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3">
                     <MarkdownRenderer content={m.content} />
                   </div>
                 </div>
@@ -615,6 +1103,11 @@ export default function Page() {
                   <div className="relative max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[0.95rem] tracking-tight text-[#E8E8E6] md:max-w-2xl md:p-2 md:text-[1.2rem]">
                     <div className="animate-fade-in transition-opacity duration-500">
                       <MarkdownRenderer content={m.content} />
+
+                      {/* Model attribution */}
+                      <div className="mt-4 text-xs text-[#f7eee380] italic">
+                        Generated by {getModelDisplayName(selectedModel)}
+                      </div>
                     </div>
                     <div className="mb-14 flex flex-wrap -gap-3 ">
                       <div className="flex items-center justify-center rounded-full  p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
@@ -632,7 +1125,7 @@ export default function Page() {
                           <button
                             onClick={() => regenerateQuery(previousUserMessage, m.id)}
                             className="text-sm md:text-base"
-                            disabled={regenForMessageId === m.id || isLoading}
+                            // disabled={regenForMessageId === m.id || isLoading}
                           >
                             {regenForMessageId === m.id ? " " : <RotateCw className="h-4 w-4" />}
                           </button>
@@ -647,6 +1140,23 @@ export default function Page() {
                           )}
                         </button>
                       </div>
+
+                      {/* TTS playback button for assistant messages */}
+                      {isVoiceMode && (
+                        <div className="flex items-center justify-center rounded-full p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                          <button
+                            onClick={() => playResponseAudio(m.content)}
+                            className="text-sm md:text-base"
+                            disabled={isPlaying}
+                          >
+                            {isPlaying ? (
+                              <VolumeX className="h-4 w-4 text-[#48AAFF] animate-pulse" />
+                            ) : (
+                              <Volume2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -690,41 +1200,138 @@ export default function Page() {
           </div>
 
           <div
-            className={`flex sticky bottom-0 z-10 flex-row gap-3 items-center justify-center ${
-              showWhiteboard ? "right-[33.333%]" : "right-0"
-            } left-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c80] to-transparent p-4 transition-all duration-300`}
+            className={`flex sticky bottom-0 z-10 flex-row gap-3 items-center justify-center ${showWhiteboard ? "right-[33.333%]" : "right-0"
+              } left-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c80] to-transparent p-4 transition-all duration-300`}
           >
+            {/* Model selector in the bottom bar */}
+
+
             <form
               onSubmit={onSubmit}
               className={`mx-auto w-full ${showWhiteboard ? "max-w-full px-4" : "max-w-2xl px-3 md:px-0"}`}
             >
-              <div className="group flex w-full items-center rounded-2xl border border-[#f7eee332] bg-gradient-to-r from-[#2f2f2f] to-[#454444] p-1 shadow-lg backdrop-blur-sm transition-all duration-300">
-                <div className="flex relative flex-1 items-center overflow-hidden rounded-xl border border-transparent bg-[#0c0c0c] py-5 transition-all duration-300 group-hover:border-[#f7eee332]">
-                  <textarea
-                    ref={textareaRef}
-                    placeholder="Ask me anything..."
-                    value={input}
-                    onChange={(e) => {
-                      handleInputChange(e);
-                      adjustTextareaHeight();
-                    }}
-                    onKeyDown={handleKeyDown}
-                    className="max-h-[120px] min-h-[90px] flex-1 resize-none bg-transparent font-serif px-2 py-2 text-sm text-[#f7eee3] outline-none transition-all duration-200 placeholder:text-[#f7eee380] md:text-base"
-                    rows={1}
-                  />
-                  <div className="absolute right-2 bottom-2 flex gap-3 items-center justify-center">
-                    <button className="flex gap-2 bg-gradient-to-tr from-[#0c0c0c] to-[#0c0c0c] text-[#f7eee380] hover:text-[#f7eee3] p-2 rounded-lg" onClick={() => setShowWhiteboard(true)}>Canvas<Paintbrush /></button>
-                    <button
-                      type="submit"
-                      className="p-2 rounded-full bg-[#f7eee3] text-[#0c0c0c] font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm backdrop-blur-sm"
+               <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl bg-[#ffffff] p-1  shadow-md transition-all duration-300">
+                <div className="flex relative flex-1  items-center overflow-hidden bg-[#bebdbdde] rounded-xl py-5 transition-all duration-300">
+                  {!isVoiceMode ? (
+                    <textarea
+                      ref={textareaRef}
+                      placeholder="Ask me anything..."
+                      value={input}
+                      onChange={(e) => {
+                        handleInputChange(e);
+                        adjustTextareaHeight();
+                      }}
+                      onKeyDown={handleKeyDown}
+                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-serif px-4 py-2 text-sm text-[#0c0c0c] outline-none transition-all duration-200 placeholder:text-[#0c0c0c] md:text-base"
+                      rows={1}
+                    />
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center px-4">
+                      <div className={`flex flex-col items-center ${isRecording ? 'animate-pulse' : ''}`}>
+                        <div className="text-center mb-2">
+                          {isRecording ? (
+                            <span className="text-red-500 text-sm">Recording...</span>
+                          ) : (
+                            <span className="text-[#f7eee380] text-sm">Ready to record</span>
+                          )}
+                        </div>
+                        {transcribedText && (
+                          <div className="max-w-full overflow-x-auto text-[#f7eee3] text-sm py-2">
+                            {transcribedText}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute right-3 bottom-3 flex gap-3 items-center justify-center">
+                    {/* Voice mode toggle button */}
+                    {/* <button 
+                      type="button"
+                      onClick={toggleVoiceMode} 
+                      className={`p-2 rounded-full ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee380]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
                     >
-                      {isLoading || isWebSearchLoading ? <Square fill="#0c0c0c" /> : <ArrowUp  />}
-                    </button>
+                      {isVoiceMode ? <Mic /> : <MicOff />}
+                    </button>  */}
+
+                    {/* Voice recording button (only when in voice mode) */}
+                    {isVoiceMode && (
+                      <button
+                        type="button"
+                        onClick={isRecording ? stopRecording : startRecording}
+                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-[#252525] hover:bg-[#323232]'} text-[#f7eee3] transition-colors duration-200`}
+                      >
+                        {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      </button>
+                    )}
+
+                    {/* Canvas button */}
+
+
+                    {/* Submit button */}
+                    {!isVoiceMode && (
+
+                      <div className="flex items-center justify-center p-1 bg-[#E0E0E0] rounded-full box-shadow: 76px 2px 58px -95px rgba(224,224,224,1) inset;">
+                        <button
+                          type="submit"
+                          className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
+                          // disabled={isLoading || isWebSearchLoading}
+                        >
+                          {isLoading || isWebSearchLoading ? <Square className="h-5 w-5" fill="#f7eee3" /> : <ArrowUp className="h-4 w-4" />}
+                        </button>
+                      </div>
+
+                    )}
                   </div>
+
                 </div>
+                <div className="flex gap-1 items-center">
+
+
+                  <div className="relative m-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowModelSelector(!showModelSelector)}
+                      className="flex items-center justify-between gap-2 px-4 py-2 rounded-lg bg-[#252525] text-[#f7eee3] transition-colors hover:bg-[#323232]">
+                      <span>{getModelDisplayName(selectedModel)}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+
+                    {showModelSelector && (
+                      <div className="absolute mt-1 z-10 rounded-md bg-[#1a1a1a] shadow-lg border border-[#383838]">
+                        <ul className="py-1">
+                          {MODEL_OPTIONS.map((model) => (
+                            <li key={model.id}>
+                              <button
+                                type="button"
+                                className={`w-full text-left px-4 py-2 hover:bg-[#252525] ${selectedModel === model.id ? 'bg-[#323232] text-[#f7eee3]' : 'text-[#f7eee380]'}`}
+                                onClick={() => handleModelChange(model.id)}
+                              >
+                                {model.name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  <button type="button" className="flex m-1 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] p-2 rounded-lg transition-colors duration-200" onClick={() => setShowWhiteboard(true)}>
+                    <Paintbrush className="h-4 w-4" />
+                  </button>
+
+
+
+                  <button
+                    type="button"
+                    onClick={toggleVoiceMode}
+                    className={`flex m-1 p-2 rounded-lg ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee3]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
+                  >
+                    {isVoiceMode ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </button>
+                </div>
+
               </div>
 
-              {input.length > 0 && (
+              {input.length > 0 && !isVoiceMode && (
                 <div className="mt-1.5 flex items-center justify-between px-1 text-xs text-[#f7eee380]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
                   <span>{input.length}/2000</span>
@@ -763,3 +1370,6 @@ export default function Page() {
     </main>
   );
 }
+
+
+

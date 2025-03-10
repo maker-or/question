@@ -12,9 +12,8 @@ interface RequestBody {
   messages: ConvertibleMessage[];
   model: string;
   experimental_attachments?: string[];
+  voiceMode?: boolean; // Flag to indicate if this is a voice interaction
 }
-
-
 
 export async function POST(req: Request): Promise<Response> {
   try {
@@ -35,7 +34,8 @@ export async function POST(req: Request): Promise<Response> {
     const body = await req.json() as RequestBody;
     
     console.log("Request body received:", JSON.stringify(body).substring(0, 200) + "...");
-    const selectedModel = body.model || "llama3-70b-8192";
+    const selectedModel = body.model || "google/gemini-2.0-pro-exp-02-05:free";
+    const isVoiceMode = body.voiceMode || false;
 
     if (!body.messages || body.messages.length === 0) {
       throw new Error('No messages provided');
@@ -152,6 +152,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
               Context: ${context}
               Question: ${query}
               Please provide a comprehensive and detailed answer based on the provided context and cite the book name at the end of the response.
+              ${isVoiceMode ? 'Since the user is in voice mode, make your response concise and natural for speech.' : ''}
             `;
           }
         } catch (pineconeError) {
@@ -166,6 +167,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
         finalPrompt = `
           Question: ${query}
           keep the response friendly tone and short
+          ${isVoiceMode ? 'Since the user is in voice mode, make your response concise and natural for speech.' : ''}
         `;
       }
 
@@ -173,7 +175,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
       try {
         console.log("Generating final response with model:", selectedModel);
         const result = streamText({
-          model: openrouter('google/gemini-2.0-flash-thinking-exp-1219:free'),
+          model: openrouter(selectedModel),
           system: `
             You are an expert exam assistant named SphereAI designed to provide accurate, detailed, and structured answers to user queries help them to prepare for their exams.  Follow these guidelines:
         
@@ -195,6 +197,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
             5. **Tone and Style**:
                - Use a professional and friendly tone.
                - Avoid overly technical jargon unless requested.
+               ${isVoiceMode ? '- Since the user is in voice mode, make your responses more conversational and suitable for listening.' : ''}
             6. **Error Handling**:
                - If the query is unclear, ask for clarification before answering.
             7. **Citations**:
