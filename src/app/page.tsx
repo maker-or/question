@@ -926,25 +926,15 @@ export default function Page() {
       )}
 
       {/* Toggle button - always visible */}
-      <div className="fixed bottom-1  right-1 z-10">
+      <div className="fixed bottom-1 right-1 z-10">
         <button
           onClick={toggleActionButtons}
-          className={`flex items-center justify-center gap-2 rounded-full ${showActionButtons ? 'bg-[#48AAFF]' : 'bg-[#bg-[#0D0C0C]]'} p-3 text-white hover:bg-[#48AAFF] transition-all duration-300`}
+          className={`flex items-center justify-center gap-2 rounded-full ${showActionButtons ? 'bg-[#48AAFF]' : 'bg-[#151515]'} p-3 text-white hover:bg-[#48AAFF] transition-all duration-300`}
         >
           {/* <Sparkle className={showActionButtons ? 'text-white' : ''} /> */}
           <Sparkles className={showActionButtons ? 'text-white' : ''} />
         </button>
       </div>
-
-      <div className="flex items-center justify-center p-1 bg-[#E0E0E0] rounded-full box-shadow: 76px 2px 58px -95px rgba(224,224,224,1) inset;">
-                        <button
-                          type="submit"
-                          className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
-                          // disabled={isLoading || isWebSearchLoading}
-                        >
-                          {isLoading || isWebSearchLoading ? <Square className="h-5 w-5" fill="#f7eee3" /> : <ArrowUp className="h-4 w-4" />}
-                        </button>
-                      </div>
 
       {/* Audio element for TTS playback */}
       <audio ref={audioRef} src={audioSrc || undefined} className="hidden" />
