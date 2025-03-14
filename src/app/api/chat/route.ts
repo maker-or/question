@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
 //import Groq from "groq-sdk"; // Ensure this package is installed
-import { streamText, smoothStream ,generateText} from 'ai';
+import { streamText, smoothStream ,generateText,wrapLanguageModel, extractReasoningMiddleware} from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { getEmbedding } from '../../../../utils/embeddings';
@@ -48,6 +48,11 @@ export async function POST(req: Request): Promise<Response> {
 
     const query = lastMessage.content;
     console.log('Query:', query);
+
+    // NEW: Compute conversation context from previous messages, if any
+    const conversationContext = body.messages.length > 1 
+      ? `Previous conversation:\n${body.messages.slice(0, -1).map(msg => msg.content).join('\n\n')}\n`
+      : '';
 
     // NEW: Check for attachments
     const attachments = body.experimental_attachments || [];
@@ -140,6 +145,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
           if (!queryResponse.matches || queryResponse.matches.length === 0) {
             console.log("No matches found in Pinecone, falling back to general knowledge");
             finalPrompt = `
+              ${conversationContext}
               Question: ${query}
               keep the response friendly tone and short
             `;
@@ -149,6 +155,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
               .join('\n\n');
 
             finalPrompt = `
+              ${conversationContext}
               Context: ${context}
               Question: ${query}
               Please provide a comprehensive and detailed answer based on the provided context and cite the book name at the end of the response.
@@ -158,6 +165,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
         } catch (pineconeError) {
           console.error("Pinecone error:", pineconeError);
           finalPrompt = `
+            ${conversationContext}
             Question: ${query}
             keep the response friendly tone and short
           `;
@@ -165,17 +173,22 @@ Analyze the following query: "${query}" and return the appropriate tag.
       } else {
         // Use general knowledge
         finalPrompt = `
+          ${conversationContext}
           Question: ${query}
           keep the response friendly tone and short
           ${isVoiceMode ? 'Since the user is in voice mode, make your response concise and natural for speech.' : ''}
         `;
       }
-
+      const model = wrapLanguageModel({
+        model: openrouter(selectedModel),
+        middleware: extractReasoningMiddleware({ tagName: 'think' }),
+      });
       // Generate the response using OpenRouter
       try {
         console.log("Generating final response with model:", selectedModel);
         const result = streamText({
-          model: openrouter(selectedModel),
+          model: model,
+          
           system: `
             You are an expert exam assistant named SphereAI designed to provide accurate, detailed, and structured answers to user queries help them to prepare for their exams.  Follow these guidelines:
         
@@ -206,6 +219,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
                - if the user requests you to generate a question, create only a thought-provoking and contextually appropriate question without providing any answers.
           `,
           prompt: finalPrompt,
+        
         });
 
         return result.toDataStreamResponse();
@@ -232,7 +246,10 @@ Analyze the following query: "${query}" and return the appropriate tag.
   } catch (error: unknown) {
     console.error('Error in chat route:', error instanceof Error ? error.message : 'Unknown error');
     return new Response(
-      JSON.stringify({ error: 'An error occurred while processing your request', details: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({
+        error: 'An error occurred while processing your request',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },

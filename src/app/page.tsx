@@ -39,6 +39,7 @@ import {
   Paintbrush,
   Mic,
   MicOff,
+  X,
   Volume2,
   VolumeX,
   ChevronDown,
@@ -53,6 +54,27 @@ import html2canvas from "html2canvas";
 
 import styles from "~/app/chat.module.css";
 import { Attachment } from "ai";
+import { useRouter } from "next/navigation";
+import { v4 as uuidv4 } from "uuid";
+import { createPDF } from "../utils/createPDF"; // <-- Added import for PDF conversion
+
+// Add new ChatInfo interface
+interface ChatInfo {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messageCount: number;
+  firstMessage?: string;
+}
+
+// Update the Message interface to be compatible with UIMessage
+interface Message {
+  id: string;
+  role: "user" | "assistant" | "system" | "data"; // Added "system" | "data"
+  content: string;
+  model?: string; 
+}
 
 const components: TLUiComponents = {};
 
@@ -65,86 +87,99 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   // Sanitize and format markdown code blocks before rendering.
-  let sanitizedContent = DOMPurify.sanitize(content, { USE_PROFILES: { html: true } });
+  let sanitizedContent = content; // Start with the original content
+
+  // Improved regex for code blocks
+  sanitizedContent = sanitizedContent.replace(
+    /```(\w*)\n([\s\S]*?)```/g,
+    (match, lang, code) => {
+      const trimmedCode = code.trim();
+      return `<pre><code class="language-${lang}">${trimmedCode}</code></pre>`;
+    }
+  );
+
+  // Sanitize the content *excluding* code blocks
+  sanitizedContent = DOMPurify.sanitize(sanitizedContent, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ['style'], // Remove style tags
+  });
 
   // Ensure proper spacing for lists and headings
   sanitizedContent = sanitizedContent
-
     .replace(/\n(#{1,6}\s)/g, "\n\n$1")
     .replace(/\n([*-]\s)/g, "\n\n$1")
     .replace(/\n(\d+\.\s)/g, "\n\n$1")
     .replace(/(\n\s*\n)/g, "$1\n");
 
-
-  sanitizedContent = sanitizedContent.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-    const codeContent = code.trim();
-    let formatted = codeContent;
-    try {
-      if (lang === "js" || lang === "javascript" || lang === "jsx" || lang === "ts" || lang === "typescript" || lang === "tsx") {
-        formatted = prettier.format(codeContent, {
-          parser: "babel",
-          plugins: [parserBabel],
-          printWidth: 80
-        });
-      }
-    } catch (error) {
-      console.error("Error formatting code block:", error);
-    }
-    return "```" + lang + "\n" + formatted.trim() + "\n```";
-  });
-
   // Better handling for math expressions - preserve LaTeX syntax
   sanitizedContent = sanitizedContent
     // Convert display math to a form that won't be affected by other replacements
-    .replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
-      // Preserve newlines in display math
-      return `\n\n$$${math}$$\n\n`;
-    })
-   
-    .replace(/\\\(/g, "$") 
-    .replace(/\\\)/g, "$")
+    .replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => `\n\n$$${math.trim()}$$\n\n`)
+    // Normalize inline math delimiters \( ... \) → $ ... $
+    .replace(/\\\(/g, "$").replace(/\\\)/g, "$")
+    // Preserve inline math while removing unnecessary spaces
+    .replace(/\$([^$\n]+?)\$/g, (match, math) => `$${math.trim().replace(/\s+/g, ' ')}$`)
+    // Handle LaTeX vector notation
     .replace(/\\vec\{([^}]*)\}/g, "\\vec{$1}")
-    .replace(/\\sum_\{([^}]*)\}\^\{([^}]*)\}/g, "\\sum_{$1}^{$2}")
-    .replace(/\$([^$\n]+?)\$/g, (match) => {
-      return match.replace(/\s+/g, ' ');
-    });
+    // Handle summation notation \sum_{a}^{b}
+    .replace(/\\sum_\{([^}]*)\}\^\{([^}]*)\}/g, "\\sum_{$1}^{$2}")    // Handle fractions \frac{a}{b}
+    .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "\\frac{$1}{$2}")
+        // Handle integrals \int_{a}^{b}
+    .replace(/\\int_\{([^}]*)\}\^\{([^}]*)\}/g, "\\int_{$1}^{$2}")
+        // Handle derivatives \frac{d}{dx} notation
+    .replace(/\\frac\{d\}\{d([a-zA-Z])\}/g, "\\frac{d}{d$1}")
+        // Handle partial derivatives \frac{\partial}{\partial x}
+    .replace(/\\frac\{\\partial\}\{\\partial ([a-zA-Z])\}/g, "\\frac{\\partial}{\\partial $1}")
+    // Handle functions f(x), g(x), sin(x), cos(x), etc.
+    .replace(/\\(sin|cos|tan|log|ln|exp|sec|csc|cot|arcsin|arccos|arctan)\{([^}]*)\}/g, "\\$1($2)")
+    // Handle general functions f(x), g(x), h(x)
+    .replace(/([a-zA-Z])\s*\(\s*([a-zA-Z0-9+\-*/^_]+)\s*\)/g, "$1($2)")
+    // Handle matrix notation \begin{matrix} ... \end{matrix}
+    .replace(/\\begin\{matrix\}([\s\S]*?)\\end\{matrix\}/g, "\\begin{matrix}$1\\end{matrix}")
+    // Normalize Greek letters
+    .replace(/\\alpha/g, "α")
+    .replace(/\\beta/g, "β")
+    .replace(/\\gamma/g, "γ")
+    .replace(/\\delta/g, "δ")
+    .replace(/\\theta/g, "θ")
+    .replace(/\\lambda/g, "λ")
+    .replace(/\\pi/g, "π")
+    .replace(/\\sigma/g, "σ")
+    .replace(/\\omega/g, "ω");
 
   return (
     <div className="prose prose-invert max-w-none">
       <ReactMarkdown
         remarkPlugins={[
-          remarkGfm, 
-          [remarkMath, { 
-            singleDollarTextMath: true,   
-            doubleBacktickMathDisplay: false  
+          remarkGfm,
+          [remarkMath, {
+            singleDollarTextMath: true,
+            doubleBacktickMathDisplay: false
           }],
-          // [remarkFootnotes, { inlineNotes: true }]
         ]}
         rehypePlugins={[
           [rehypeKatex, {
-           
-            strict: false,  
-            trust: true,    
-            macros: {       
+            strict: false,
+            trust: true,
+            macros: {
               "\\vec": "\\overrightarrow{#1}"
             }
-          }], 
+          }],
           rehypeRaw,
           rehypeSlug,
           [rehypeAutolinkHeadings, { behavior: 'wrap' }],
           [rehypeExternalLinks, { target: '_blank', rel: ['nofollow', 'noopener', 'noreferrer'] }]
         ]}
         components={{
-          code({node, className, children, ...props}) {
+          code({ node, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
-            
-            const { ref, ...restProps } = props as any;
-            return   match ? (
+            return match ? (
               <SyntaxHighlighter
-                style={vscDarkPlus as any}
+                style={vscDarkPlus}
                 language={match[1]}
                 PreTag="div"
-                {...restProps}
+                className="rounded-md"
+                {...props as any}
               >
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
@@ -154,14 +189,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
               </code>
             );
           },
-          img({src, alt, ...props}) {
+          img({ src, alt, ...props }) {
             return src ? (
               <span className="relative block w-full max-w-full my-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={src} 
-                  alt={alt || ""} 
-                  className="rounded-lg max-w-full max-h-[500px] object-contain mx-auto" 
+                <img
+                  src={src}
+                  alt={alt || ""}
+                  className="rounded-lg max-w-full max-h-[500px] object-contain mx-auto"
                   loading="lazy"
                   {...props}
                 />
@@ -169,7 +204,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
               </span>
             ) : null;
           },
-          table({children}) {
+          table({ children }) {
             return (
               <div className="overflow-x-auto my-4">
                 <table className="border-collapse w-full border border-gray-700">
@@ -178,28 +213,28 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
               </div>
             );
           },
-          th({children}) {
+          th({ children }) {
             return <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left">{children}</th>;
           },
-          td({children}) {
+          td({ children }) {
             return <td className="border border-gray-700 px-4 py-2">{children}</td>;
           },
-          blockquote({children}) {
+          blockquote({ children }) {
             return <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4">{children}</blockquote>;
           },
-          h1({children}) {
+          h1({ children }) {
             return <h1 className="text-2xl font-bold mt-6 mb-4">{children}</h1>;
           },
-          h2({children}) {
+          h2({ children }) {
             return <h2 className="text-xl font-bold mt-5 mb-3">{children}</h2>;
           },
-          h3({children}) {
+          h3({ children }) {
             return <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>;
           },
-          ul({children}) {
+          ul({ children }) {
             return <ul className="list-disc list-inside pl-4 my-4 space-y-2">{children}</ul>;
           },
-          ol({children}) {
+          ol({ children }) {
             return <ol className="list-decimal list-inside pl-4 my-4 space-y-2">{children}</ol>;
           }
         }}
@@ -210,13 +245,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   );
 };
 
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  model?: string; 
-}
 
 interface VisionText {
   text: {
@@ -240,9 +268,12 @@ type Checked = DropdownMenuCheckboxItemProps["checked"];
 
 // Model options
 const MODEL_OPTIONS = [
-  { id: "google/gemini-2.0-pro-exp-02-05:free", name: "Gemini 2.0 Pro" },
-  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
-  { id: "deepseek/deepseek-chat:free", name: "DeepSeek v3" }
+  { id: "google/gemini-2.0-flash-lite-preview-02-05:free", name: "Gemini flash 2.0" },
+  // { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
+  // { id: "deepseek/deepseek-chat:free", name: "DeepSeek v3" },
+   { id: "google/gemma-3-27b-it:free", name: "Gemma 3" },
+   { id: "qwen/qwq-32b:free", name: "Qwen 32B" }
+
 ];
 
 
@@ -253,7 +284,7 @@ export default function Page() {
   const [lastQuery, setLastQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>(
-    "google/gemini-2.0-pro-exp-02-05:free"
+    "google/gemini-2.0-flash-lite-preview-02-05:free"
   );
   const [showModelSelector, setShowModelSelector] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -274,6 +305,11 @@ export default function Page() {
 
   const [chatId, setChatId] = useState<string | undefined>(undefined);
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
+  
+  // New state for chat management
+  const [showChatSwitcher, setShowChatSwitcher] = useState(false);
+  const [savedChats, setSavedChats] = useState<ChatInfo[]>([]);
+  const router = useRouter();
 
   const [showActionButtons, setShowActionButtons] = useState(false);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -300,21 +336,195 @@ export default function Page() {
     setHideTimeout(timeout);
   };
 
+  // Get the chat hook first before any code uses 'messages'
+  const { messages, input, handleInputChange, handleSubmit, setInput } = useChat({
+    api: "/api/chat",
+    body: { model: selectedModel },
+    id: chatId,
+    initialMessages: initialMessages,
+    onResponse: (response) => {
+      setIsLoading(false);
+      // Only reset input if NOT using the deepseek model to prevent refresh loop
+      if (selectedModel !== "deepseek/deepseek-chat:free") {
+        resetInputField();
+      }
+      setError(null);
+      if (isRegenerating) {
+        setIsRegenerating(false);
+        setRegenForMessageId(null);
+      }
+    },
+    onError: (error) => {
+      console.error("Error:", error);
+      setIsLoading(false);
+      setError("An error occurred. Please try again.");
+    },
+  });
 
+  // Now we can use useEffect hooks that reference 'messages'
   useEffect(() => {
-    const storedChatId = localStorage.getItem("chatId");
+    const storedChatId = localStorage.getItem("currentChatId");
     if (storedChatId) {
       setChatId(storedChatId);
-    }
-    const storedMessages = localStorage.getItem("chatMessages");
-    if (storedMessages) {
-      try {
-        setInitialMessages(JSON.parse(storedMessages));
-      } catch (err) {
-        console.error("Failed to parse stored messages", err);
+      const chatMessages = localStorage.getItem(`chat_${storedChatId}`);
+      if (chatMessages) {
+        try {
+          setInitialMessages(JSON.parse(chatMessages));
+        } catch (err) {
+          console.error("Failed to parse stored messages", err);
+        }
       }
     }
-  }, []);
+
+    // Load saved chat list
+    const storedChats = localStorage.getItem("savedChats");
+    if (storedChats) {
+      try {
+        setSavedChats(JSON.parse(storedChats));
+      } catch (err) {
+        console.error("Failed to parse saved chats", err);
+      }
+    }
+  }, []); // Keep this dependency array empty - only run once on mount
+
+  // Save current chat messages when they change
+  useEffect(() => {
+    if (chatId && messages.length > 0) {
+      localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
+      
+      // Update chat metadata
+      updateChatMetadata(chatId, messages);
+    }
+  }, [messages, chatId]); // This is fine - we need to respond to message changes
+
+  // Handle keyboard shortcuts for chat management
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Command+N or Ctrl+N for new chat
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        createNewChat();
+      }
+      
+      // Command+K or Ctrl+K to open chat switcher
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowChatSwitcher(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, []); // Fixed: return function was adding event listener again, now properly removes it
+
+  // Function to create a new chat
+  const createNewChat = () => {
+    // Save current messages if needed
+    if (messages.length > 0 && chatId) {
+      localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
+    }
+    
+    // Generate new chat ID
+    const newChatId = uuidv4();
+    
+    // Add new chat to saved chats
+    const newChat: ChatInfo = {
+      id: newChatId,
+      title: "New Chat",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messageCount: 0
+    };
+    
+    const updatedChats = [...savedChats, newChat];
+    setSavedChats(updatedChats);
+    localStorage.setItem("savedChats", JSON.stringify(updatedChats));
+    
+    // Set as current chat
+    localStorage.setItem("currentChatId", newChatId);
+    setChatId(newChatId);
+    
+    // Clear messages and refresh page to start a new chat
+    localStorage.removeItem("chatMessages"); // Clear the default storage
+    window.location.href = window.location.pathname; // Refresh the page
+  };
+
+  // Function to switch to a different chat
+  const switchToChat = (selectedChatId: string) => {
+    // Save current messages
+    if (messages.length > 0 && chatId) {
+      localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
+    }
+    
+    // Set selected chat as current
+    localStorage.setItem("currentChatId", selectedChatId);
+    setChatId(selectedChatId);
+    setShowChatSwitcher(false);
+    
+    // Refresh the page to load the selected chat
+    window.location.href = window.location.pathname;
+  };
+
+  // Update chat metadata when messages change
+  const updateChatMetadata = (id: string, chatMessages: typeof messages) => {
+    // Find existing chat in saved chats
+    const chatIndex = savedChats.findIndex(chat => chat.id === id);
+    
+    if (chatIndex >= 0) {
+      const updatedChats = [...savedChats];
+      
+      // Get title from first user message or keep existing title
+      const firstUserMessage = chatMessages.find(msg => msg.role === "user");
+      const title = firstUserMessage 
+        ? firstUserMessage.content.slice(0, 30) + (firstUserMessage.content.length > 30 ? "..." : "")
+        : updatedChats[chatIndex].title;
+      
+      updatedChats[chatIndex] = {
+        ...updatedChats[chatIndex],
+        title,
+        updatedAt: Date.now(),
+        messageCount: chatMessages.length,
+        firstMessage: firstUserMessage?.content || ""
+      };
+      
+      setSavedChats(updatedChats);
+      localStorage.setItem("savedChats", JSON.stringify(updatedChats));
+    }
+  };
+
+  // Clear current chat with specific handling for local storage
+  const handleClearHistory = () => {
+    if (chatId) {
+      // Remove current chat from localStorage
+      localStorage.removeItem(`chat_${chatId}`);
+      // Update saved chats list
+      const updatedChats = savedChats.filter(chat => chat.id !== chatId);
+      localStorage.setItem("savedChats", JSON.stringify(updatedChats));
+      // Update current chat; if none, clear currentChatId
+      if (updatedChats.length > 0) {
+        const newCurrent = updatedChats.reduce((prev, cur) =>
+          cur.updatedAt > prev.updatedAt ? cur : prev
+        );
+        localStorage.setItem("currentChatId", newCurrent.id);
+      } else {
+        localStorage.removeItem("currentChatId");
+      }
+      // Reload the page to reflect changes
+      window.location.reload();
+    } else {
+      localStorage.removeItem("chatMessages");
+      localStorage.removeItem("chatId");
+      window.location.reload();
+    }
+  };
+
+  // const handleClearHistory = () => {
+  //   localStorage.removeItem("chatMessages");
+  //   localStorage.removeItem("chatId");
+  //   window.location.reload();
+  // };
 
   // -----------------------------------------------------------------------
   // Voice Mode Functions
@@ -341,8 +551,6 @@ export default function Page() {
         // Create form data to send to the server
         const formData = new FormData();
         formData.append('audio', audioFile, 'recording.wav');
-        console.log("5 4 3 2 1")
-        console.log("formData", formData)
 
         try {
           // Send to our transcription API
@@ -350,16 +558,16 @@ export default function Page() {
             method: 'POST',
             body: formData,
           });
-          console.log("sent to transcribe")
+          
           if (!response.ok) {
             throw new Error(`Transcription failed: ${response.statusText}`);
           }
 
           const data = await response.json();
           setTranscribedText(data.text);
-          setInput(data.text);
-
-          // Automatically submit the transcribed text
+          
+          // Instead of immediately setting input and submitting,
+          // defer the submission to break the potential update cycle
           setTimeout(() => {
             handleSubmitVoice(data.text);
           }, 100);
@@ -398,6 +606,9 @@ export default function Page() {
   };
 
   const playResponseAudio = async (text: string) => {
+    // Don't try to play if already playing
+    if (isPlaying) return;
+    
     try {
       const response = await fetch('/api/tts', {
         method: 'POST',
@@ -417,11 +628,15 @@ export default function Page() {
         audioRef.current.onplay = () => setIsPlaying(true);
         audioRef.current.onended = () => setIsPlaying(false);
         audioRef.current.onpause = () => setIsPlaying(false);
-        audioRef.current.play();
+        audioRef.current.play().catch(err => {
+          console.error("Error playing audio:", err);
+          setIsPlaying(false);
+        });
       }
     } catch (error) {
       console.error('Error playing audio response:', error);
       setError('Failed to play audio response.');
+      setIsPlaying(false);
     }
   };
 
@@ -433,137 +648,52 @@ export default function Page() {
     setSearchResults(null);
     setLastQuery(transcribedText);
     setError(null);
-
-    // Add the transcribed text to the chat
-    const latestMessages = await submitMessage(transcribedText);
+    
+    // Create a synthetic event to pass to handleSubmit
+    const syntheticEvent = {
+      preventDefault: () => {},
+    } as React.FormEvent;
+    
+    // Set the input and then submit in the next tick to avoid circular updates
+    setInput(transcribedText);
+    
+    // Use setTimeout to break the render cycle
+    setTimeout(() => {
+      handleSubmit(syntheticEvent);
+    }, 0);
   };
 
-  // Submit message and track the response for TTS
+  // Submit message and track the response for TTS - simplified to avoid state loops
   const submitMessage = async (messageText: string) => {
-    // Use a custom implementation to track the last response for TTS
-    const formData = {
-      messages: [...messages, { role: 'user', content: messageText, id: Date.now().toString() }],
-      model: selectedModel,
-      voiceMode: isVoiceMode
-    };
-
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response from chat API');
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Response body reader is null');
-      }
-
-      let responseText = '';
-      const decoder = new TextDecoder();
-
-      let firstChunk = true;
-      let fullResponse = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        responseText += chunk;
-
-        // Update the UI with the response text
-        // Here we're simulating a streaming response in the UI
-        if (firstChunk) {
-          const newMessage = {
-            id: `assistant-${Date.now()}`,
-            role: 'assistant' as const,
-            content: responseText
-          };
-          // Add this message to your UI state
-          // (In a real implementation, you'd use your chat state management)
-          firstChunk = false;
-        } else {
-          // Update the last message with the new content
-          // (In a real implementation, you'd update your chat state)
-        }
-
-        fullResponse = responseText;
-      }
-
-      // After getting the full response, convert it to speech if in voice mode
-      if (isVoiceMode) {
-        await playResponseAudio(fullResponse);
-      }
-
-      setIsLoading(false);
-
-      // Return the updated messages
-      return [...messages,
-      { role: 'user', content: messageText, id: `user-${Date.now()}` },
-      { role: 'assistant', content: fullResponse, id: `assistant-${Date.now()}` }
-      ];
-
+      // First update loading state
+      setIsLoading(true);
+      
+      // Create a synthetic event
+      const syntheticEvent = {
+        preventDefault: () => {},
+      } as React.FormEvent;
+      
+      // Set input and submit in the next tick
+      setInput(messageText);
+      
+      setTimeout(() => {
+        handleSubmit(syntheticEvent);
+      }, 0);
+      
+      return true;
     } catch (error) {
       console.error('Error submitting message:', error);
       setIsLoading(false);
       setError('Failed to get a response. Please try again.');
-      return messages;
+      return false;
     }
   };
 
   // -----------------------------------------------------------------------
   // PDF Export Function
   // -----------------------------------------------------------------------
-  const createPDF = () => {
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "pt",
-      format: "a4",
-    });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 40;
-    const lineHeight = 18;
-    let y = margin;
-
-    doc.setFont("Helvetica", "normal");
-    doc.setFontSize(12);
-
-    doc.text("SphereAI", margin, y);
-    y += lineHeight * 1.5;
-
-    const stripMarkdown = (text: string) => {
-      return text
-        .replace(/!\[.*?\]\(.*?\)/g, "")
-        .replace(/\[(.*?)\]\(.*?\)/g, "$1")
-        .replace(/[#>*_`~-]/g, "")
-        .replace(/\n{2,}/g, "\n")
-        .trim();
-    };
-
-    messages.forEach((message) => {
-      const plainText = stripMarkdown(message.content);
-      const lines = doc.splitTextToSize(plainText, pageWidth - margin * 2);
-      lines.forEach((line: string) => {
-        if (y + lineHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-        doc.text(line, margin, y);
-        y += lineHeight;
-      });
-      y += lineHeight;
-    });
-
-    doc.save("chat.pdf");
-  };
-
+  
   // -----------------------------------------------------------------------
   // Handle model change
   // -----------------------------------------------------------------------
@@ -585,39 +715,38 @@ export default function Page() {
   // -----------------------------------------------------------------------
   // Chat hook configuration
   // -----------------------------------------------------------------------
-  const { messages, input, handleInputChange, handleSubmit, setInput } = useChat({
-    api: "/api/chat",
-    body: { model: selectedModel },
-    id: chatId,
-    initialMessages: initialMessages,
-    onResponse: (response) => {
-      setIsLoading(false);
-      resetInputField();
-      setError(null);
-      if (isRegenerating) {
-        setIsRegenerating(false);
-        setRegenForMessageId(null);
-      }
 
-      // Store the model information with the response
-      const lastMessageIndex = messages.length;
-      if (lastMessageIndex > 0 && messages[lastMessageIndex - 1]?.role === "assistant") {
-        // Since 'model' property does not exist on 'UIMessage' type, we cannot directly update the 'messages' array.
-        // Instead, we can use this logic to update the attribution display logic as intended.
-      }
-    },
-    onError: (error) => {
-      console.error("Error:", error);
-      setIsLoading(false);
-      setError("An error occurred. Please try again.");
-    },
-  });
-
+  // Move the keyboard shortcuts effect after the chat hook to access messages
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("chatMessages", JSON.stringify(messages));
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Command+N or Ctrl+N for new chat
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        createNewChat();
+      }
+      
+      // Command+K or Ctrl+K to open chat switcher
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowChatSwitcher(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [messages]);
+  }, []); // Remove messages from dependency array since it's not used in the effect
+
+  // Save current chat messages when they change
+  useEffect(() => {
+    if (chatId && messages.length > 0) {
+      localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
+      
+      // Update chat metadata
+      updateChatMetadata(chatId, messages);
+    }
+  }, [messages, chatId]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -761,6 +890,7 @@ export default function Page() {
           setError("An error occurred while exporting the canvas.");
         }
       } else {
+        // Use the handleSubmit directly since we're in a submit handler
         handleSubmit(event);
       }
     } catch (error) {
@@ -819,11 +949,6 @@ export default function Page() {
     );
   };
 
-  const handleClearHistory = () => {
-    localStorage.removeItem("chatMessages");
-    localStorage.removeItem("chatId");
-    window.location.reload();
-  };
 
   const shareChat = async () => {
     try {
@@ -853,9 +978,14 @@ export default function Page() {
     setIsLoading(true);
     setError(null);
     setInput(query);
+    
+    // Break the cycle with setTimeout
     setTimeout(() => {
-      handleSubmit({ preventDefault: () => { } } as React.FormEvent);
-    }, 0);
+      const syntheticEvent = {
+        preventDefault: () => {},
+      } as React.FormEvent;
+      handleSubmit(syntheticEvent);
+    }, 10);
   };
 
   const scrollToTop = () => {
@@ -885,27 +1015,103 @@ export default function Page() {
 
   return (
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300`}>
-      {/* Action buttons panel - now as a floating panel that stays visible */}
+      {/* Chat switcher modal */}
+      {showChatSwitcher && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-[#151515] rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Your Chats</h2>
+              <button 
+                onClick={() => setShowChatSwitcher(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                  <X className="h-4 w-4"/>
+              </button>
+            </div>
+            
+            <div className="p-2 flex-1 overflow-y-auto">
+              {savedChats.length > 0 ? (
+                <div className="space-y-2">
+                  {savedChats
+                    .sort((a, b) => b.updatedAt - a.updatedAt) // Sort by most recent
+                    .map(chat => (
+                      <button
+                        key={chat.id}
+                        onClick={() => switchToChat(chat.id)}
+                        className={`w-full text-left p-3 rounded-lg hover:bg-[#252525] transition-colors ${
+                          chat.id === chatId ? 'bg-[#323232] border border-[#48AAFF]' : ''
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-medium text-white truncate">{chat.title}</h3>
+                          <span className="text-xs text-gray-400">
+                            {new Date(chat.updatedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {/* {chat.firstMessage && (
+                          <p className="text-sm text-gray-300 mt-1 truncate">{chat.firstMessage}</p>
+                        )} */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {chat.messageCount} message{chat.messageCount !== 1 ? 's' : ''}
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  No saved chats. Create a new one with Cmd+N
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-gray-700">
+              <button
+                onClick={createNewChat}
+                className="w-full py-2 bg-[#48AAFF] hover:bg-[#3a88cc] text-white rounded-lg transition-colors"
+              >
+                New Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rest of your existing components */}
+      {/* ...existing code... */}
+      
+      {/* Update your action buttons panel to include a "New Chat" button */}
       {showActionButtons && (
         <div
-          className="fixed bottom-16 right-1 z-20 p-3  backdrop-blur-md rounded-lg shadow-lg border border-[#f7eee332]"
+          className="fixed bottom-16 right-1 z-20 p-3 backdrop-blur-md rounded-lg shadow-lg border border-[#f7eee332]"
         >
           <div className="flex flex-col gap-1">
             <button
+              onClick={createNewChat}
+              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
+            >
+              New Chat
+            </button>
+            <button
+              onClick={() => setShowChatSwitcher(true)}
+              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
+            >
+              Switch Chat
+            </button>
+            <button
               onClick={handleClearHistory}
-              className="flex items-start justify-start gap-2 rounded-xl  p-3 text-white hover:bg-[#575757] w-full"
+              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             >
               Delete Chat
             </button>
             <button
-              onClick={createPDF}
-              className="flex items-start justify-start gap-2 rounded-xl  p-3 text-white hover:bg-[#575757] w-full"
+              onClick={() => createPDF(messages)}
+              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             >
               Export to PDF
             </button>
             <button
               onClick={() => setShowActionButtons(false)}
-              className="flex items-start justify-start gap-2 rounded-xl  p-3 text-white hover:bg-[#575757] w-full mt-2"
+              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full mt-2"
             >
               Close Menu
             </button>
@@ -913,7 +1119,8 @@ export default function Page() {
         </div>
       )}
 
-      {/* Toggle button - always visible */}
+      {/* ...existing code... */}
+      {/* Audio element for TTS playback */}
       <div className="fixed bottom-1 right-1 z-10">
         <button
           onClick={toggleActionButtons}
@@ -924,7 +1131,6 @@ export default function Page() {
         </button>
       </div>
 
-      {/* Audio element for TTS playback */}
       <audio ref={audioRef} src={audioSrc || undefined} className="hidden" />
 
       {messages.length === 0 ? (
@@ -1082,7 +1288,7 @@ export default function Page() {
                   className="animate-slide-in group relative mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="max-w-[85vw] text-[1.4em] tracking-tight font-serif rounded-2xl bg-[#f7eee33b] text-[#E8E8E6] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3">
+                  <div className="max-w-[85vw] text-[1.4em] tracking-tight font-serif rounded-t-3xl rounded-br-3xl bg-[#2D2E30] text-[#E8E8E6] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3">
                     <MarkdownRenderer content={m.content} />
                   </div>
                 </div>
