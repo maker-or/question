@@ -277,6 +277,28 @@ const MODEL_OPTIONS = [
 
 ];
 
+// Add isMobile detection hook
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || 
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        ));
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  return isMobile;
+};
 
 export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
@@ -326,6 +348,9 @@ export default function Page() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  const [showDesktopOnlyModal, setShowDesktopOnlyModal] = useState(false);
+  const isMobile = useIsMobile();
 
   // const handleMouseEnter = () => {
   //   if (hideTimeout) clearTimeout(hideTimeout);
@@ -1012,6 +1037,15 @@ export default function Page() {
     setShowActionButtons(prev => !prev);
   };
 
+  // Update the whiteboard toggle to check for mobile
+  const toggleWhiteboard = () => {
+    if (isMobile) {
+      setShowDesktopOnlyModal(true);
+    } else {
+      setShowWhiteboard(prev => !prev);
+    }
+  };
+
   // -----------------------------------------------------------------------
   // Get model display name
   // -----------------------------------------------------------------------
@@ -1022,6 +1056,24 @@ export default function Page() {
 
   return (
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300`}>
+      {/* Desktop-only modal for whiteboard */}
+      {showDesktopOnlyModal && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-[#151515] rounded-lg w-full max-w-sm p-6 text-center">
+            <h3 className="text-lg font-medium text-white mb-3">Desktop Feature</h3>
+            <p className="text-gray-300 mb-5">
+              The whiteboard feature works best on desktop devices. Please switch to a desktop computer for the best experience.
+            </p>
+            <button 
+              onClick={() => setShowDesktopOnlyModal(false)}
+              className="w-full py-2 bg-[#48AAFF] hover:bg-[#3a88cc] text-white rounded-lg transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Chat switcher modal */}
       {showChatSwitcher && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -1089,7 +1141,7 @@ export default function Page() {
       {/* Update your action buttons panel to include a "New Chat" button */}
       {showActionButtons && (
         <div
-          className="fixed bottom-16 right-1 z-20 p-3 backdrop-blur-md rounded-lg shadow-lg border border-[#f7eee332]"
+          className="fixed bottom-16 right-1 z-20 p-3 backdrop-blur-md rounded-lg shadow-lg border border-[#f7eee332] max-w-[90vw] sm:max-w-xs"
         >
           <div className="flex flex-col gap-1">
             <button
@@ -1131,7 +1183,7 @@ export default function Page() {
       <div className="fixed bottom-1 right-1 z-10">
         <button
           onClick={toggleActionButtons}
-          className={`flex items-center justify-center gap-2 rounded-full ${showActionButtons ? 'bg-[#48AAFF]' : 'bg-[#151515]'} p-3 text-white hover:bg-[#48AAFF] transition-all duration-300`}
+          className={`flex items-center justify-center gap-2 rounded-full ${showActionButtons ? 'bg-[#48AAFF]' : 'bg-[#151515]'} p-3 text-white hover:bg-[#48AAFF] transition-all duration-300 shadow-lg`}
         >
           {/* <Sparkle className={showActionButtons ? 'text-white' : ''} /> */}
           <Sparkles className={showActionButtons ? 'text-white' : ''} />
@@ -1141,8 +1193,8 @@ export default function Page() {
       <audio ref={audioRef} src={audioSrc || undefined} className="hidden" />
 
       {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-screen">
-          <h1 className="text-[3em]  text-[#f7eee3ca] mb-4 font-serif">What do you want to learn? </h1>
+        <div className="flex flex-col items-center justify-center h-screen px-4">
+          <h1 className="text-[2em] sm:text-[3em] text-[#f7eee3ca] mb-4 font-serif text-center">What do you want to learn?</h1>
 
 
 
@@ -1150,7 +1202,7 @@ export default function Page() {
           <div className="w-full max-w-2xl px-4">
             <form onSubmit={onSubmit} className="w-full">
               <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl bg-[#ffffff] p-1  shadow-md transition-all duration-300">
-                <div className="flex relative flex-1  items-center overflow-hidden bg-[#bebdbdde] rounded-xl py-5 transition-all duration-300">
+                <div className="flex relative flex-1  items-center overflow-hidden bg-[#bebdbdde] rounded-xl py-3 sm:py-5 transition-all duration-300">
                   {!isVoiceMode ? (
                     <textarea
                       ref={textareaRef}
@@ -1223,15 +1275,15 @@ export default function Page() {
                   </div>
 
                 </div>
-                <div className="flex gap-1 items-center">
+                <div className="flex gap-1 items-center flex-wrap justify-between">
 
 
                   <div className="relative m-1">
                     <button
                       type="button"
                       onClick={() => setShowModelSelector(!showModelSelector)}
-                      className="flex items-center justify-between gap-2 px-4 py-2 rounded-lg bg-[#252525] text-[#f7eee3] transition-colors hover:bg-[#323232]">
-                      <span>{getModelDisplayName(selectedModel)}</span>
+                      className="flex items-center justify-between gap-2 px-3 py-2 text-sm sm:px-4 sm:py-2 sm:text-base rounded-lg bg-[#252525] text-[#f7eee3] transition-colors hover:bg-[#323232]">
+                      <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
 
@@ -1253,7 +1305,7 @@ export default function Page() {
                       </div>
                     )}
                   </div>
-                  <button type="button" className="flex m-1 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] p-3 rounded-lg transition-colors duration-200" onClick={() => setShowWhiteboard(true)}>
+                  <button type="button" className="flex m-1 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
                     <Paintbrush className="h-4 w-4" />
                   </button>
 
@@ -1262,7 +1314,7 @@ export default function Page() {
                   {/* <button
                     type="button"
                     onClick={toggleVoiceMode}
-                    className={`flex m-1 p-3 rounded-lg ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee3]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
+                    className={`flex m-1 p-2 rounded-lg ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee3]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
                   >
                     {isVoiceMode ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                   </button> */}
@@ -1280,8 +1332,8 @@ export default function Page() {
           </div>
         </div>
       ) : (
-        <div className={`relative mx-auto flex h-full w-full flex-col ${showWhiteboard ? "md:w-full" : "md:w-2/3"}`}>
-          <div className="flex-1 space-y-4 overflow-y-auto px-3 py-4 pb-24 md:space-y-6 md:px-0 md:py-6">
+        <div className={`relative mx-auto flex h-full w-full flex-col ${showWhiteboard ? "md:w-full" : "md:w-2/3 w-full"}`}>
+          <div className="flex-1 space-y-4 overflow-y-auto px-2 sm:px-3 py-4 pb-24 md:space-y-6 md:px-0 md:py-6">
             {messages.map((m, index) => {
               const previousUserMessage =
                 m.role === "assistant" &&
@@ -1295,13 +1347,13 @@ export default function Page() {
                   className="animate-slide-in group relative mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="max-w-[85vw] text-[1.4em] tracking-tight font-serif rounded-t-3xl rounded-br-3xl bg-[#1F2937] text-[#E8E8E6] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3">
+                  <div className="max-w-[95vw] sm:max-w-[85vw] text-[1.2em] sm:text-[1.4em] tracking-tight font-serif rounded-t-3xl rounded-br-3xl bg-[#1F2937] text-[#E8E8E6] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3 p-3">
                     <MarkdownRenderer content={m.content} />
                   </div>
                 </div>
               ) : (
                 <div key={m.id} className="animate-slide-in group relative flex flex-col md:mx-0">
-                  <div className="relative max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[0.95rem] tracking-tight text-[#E8E8E6] md:max-w-2xl md:p-2 md:text-[1.2rem]">
+                  <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[0.9rem] sm:text-[0.95rem] tracking-tight text-[#E8E8E6] md:max-w-2xl md:p-2 md:text-[1.2rem]">
                     <div className="animate-fade-in transition-opacity duration-500">
                       <MarkdownRenderer content={m.content} />
 
@@ -1310,19 +1362,19 @@ export default function Page() {
                         Generated by {getModelDisplayName(selectedModel)}
                       </div>
                     </div>
-                    <div className="mb-14 flex flex-wrap -gap-3 ">
-                      <div className="flex items-center justify-center rounded-full  p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                    <div className="mb-14 flex flex-wrap gap-1 sm:gap-2">
+                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
                         <button onClick={handleSearchWeb} className="text-sm md:text-base">
                           <Globe className="h-4 w-4" />
                         </button>
                       </div>
-                      <div className="flex items-center justify-center rounded-full  p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
                         <button onClick={() => handleSearchYouTube(lastQuery)} className="text-sm md:text-base">
                           <Play className="h-4 w-4" />
                         </button>
                       </div>
                       {previousUserMessage && (
-                        <div className="flex items-center justify-center rounded-full  p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                        <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
                           <button
                             onClick={() => regenerateQuery(previousUserMessage, m.id)}
                             className="text-sm md:text-base"
@@ -1332,7 +1384,7 @@ export default function Page() {
                           </button>
                         </div>
                       )}
-                      <div className="flex items-center justify-center rounded-full  p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
                         <button onClick={() => copyMessage(m.content, m.id)} className="text-sm md:text-base">
                           {copiedMessageId === m.id ? (
                             <Check className="h-4 w-4 text-[#48AAFF]" />
@@ -1344,7 +1396,7 @@ export default function Page() {
 
                       {/* TTS playback button for assistant messages */}
                       {isVoiceMode && (
-                        <div className="flex items-center justify-center rounded-full p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                        <div className="flex items-center justify-center rounded-full p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
                           <button
                             onClick={() => playResponseAudio(m.content)}
                             className="text-sm md:text-base"
@@ -1402,17 +1454,17 @@ export default function Page() {
 
           <div
             className={`flex sticky bottom-0 z-10 flex-row gap-3 items-center justify-center ${showWhiteboard ? "right-[33.333%]" : "right-0"
-              } left-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c80] to-transparent p-4 transition-all duration-300`}
+              } left-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c80] to-transparent p-2 sm:p-4 transition-all duration-300`}
           >
             {/* Model selector in the bottom bar */}
 
 
             <form
               onSubmit={onSubmit}
-              className={`mx-auto w-full ${showWhiteboard ? "max-w-full px-4" : "max-w-2xl px-3 md:px-0"}`}
+              className={`mx-auto w-full ${showWhiteboard ? "max-w-full px-2 sm:px-4" : "max-w-2xl px-2 sm:px-3 md:px-0"}`}
             >
                <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl bg-[#ffffff] p-1  shadow-md transition-all duration-300">
-                <div className="flex relative flex-1  items-center overflow-hidden bg-[#bebdbdde] rounded-xl py-5 transition-all duration-300">
+                <div className="flex relative flex-1  items-center overflow-hidden bg-[#bebdbdde] rounded-xl py-3 sm:py-5 transition-all duration-300">
                   {!isVoiceMode ? (
                     <textarea
                       ref={textareaRef}
@@ -1485,15 +1537,15 @@ export default function Page() {
                   </div>
 
                 </div>
-                <div className="flex gap-1 items-center">
+                <div className="flex gap-1 items-center flex-wrap">
 
 
                   <div className="relative m-1">
                     <button
                       type="button"
                       onClick={() => setShowModelSelector(!showModelSelector)}
-                      className="flex items-center justify-between gap-2 px-4 py-2 rounded-lg bg-[#252525] text-[#f7eee3] transition-colors hover:bg-[#323232]">
-                      <span>{getModelDisplayName(selectedModel)}</span>
+                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm sm:px-4 sm:py-2 rounded-lg bg-[#252525] text-[#f7eee3] transition-colors hover:bg-[#323232]">
+                      <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
 
@@ -1515,7 +1567,7 @@ export default function Page() {
                       </div>
                     )}
                   </div>
-                  <button type="button" className="flex m-1 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] p-2 rounded-lg transition-colors duration-200" onClick={() => setShowWhiteboard(true)}>
+                  <button type="button" className="flex m-1 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
                     <Paintbrush className="h-4 w-4" />
                   </button>
 
