@@ -394,16 +394,59 @@ export default function Page() {
   // Now we can use useEffect hooks that reference 'messages'
   useEffect(() => {
     const storedChatId = localStorage.getItem("currentChatId");
+    
     if (storedChatId) {
       setChatId(storedChatId);
-      const chatMessages = localStorage.getItem(`chat_${storedChatId}`);
-      if (chatMessages) {
-        try {
-          setInitialMessages(JSON.parse(chatMessages));
-        } catch (err) {
-          console.error("Failed to parse stored messages", err);
+      
+      try {
+        // Explicitly get the messages for this chat ID
+        const chatMessagesJson = localStorage.getItem(`chat_${storedChatId}`);
+        
+        // Only set messages if they exist as a proper array
+        if (chatMessagesJson) {
+          const parsedMessages = JSON.parse(chatMessagesJson);
+          
+          // Check if it's actually an array of messages
+          if (Array.isArray(parsedMessages)) {
+            setInitialMessages(parsedMessages);
+          } else {
+            console.warn("Stored messages are not an array, setting empty messages");
+            setInitialMessages([]);
+            // Fix the storage
+            localStorage.setItem(`chat_${storedChatId}`, JSON.stringify([]));
+          }
+        } else {
+          // No messages found for this chat ID, set empty array
+          setInitialMessages([]);
+          // Create the empty array in storage
+          localStorage.setItem(`chat_${storedChatId}`, JSON.stringify([]));
         }
+      } catch (err) {
+        console.error("Failed to parse stored messages", err);
+        setInitialMessages([]);
+        // Reset to empty on error
+        localStorage.setItem(`chat_${storedChatId}`, JSON.stringify([]));
       }
+    } else {
+      // No current chat ID, so create a new one
+      const newChatId = uuidv4();
+      localStorage.setItem("currentChatId", newChatId);
+      localStorage.setItem(`chat_${newChatId}`, JSON.stringify([]));
+      setChatId(newChatId);
+      setInitialMessages([]);
+      
+      // Also create a new chat entry
+      const newChat: ChatInfo = {
+        id: newChatId,
+        title: "New Chat",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        messageCount: 0
+      };
+      
+      const updatedChats = [...savedChats, newChat];
+      setSavedChats(updatedChats);
+      localStorage.setItem("savedChats", JSON.stringify(updatedChats));
     }
 
     // Load saved chat list
@@ -451,13 +494,16 @@ export default function Page() {
 
   // Function to create a new chat
   const createNewChat = () => {
-    // Save current messages if needed
+    // Generate new chat ID
+    const newChatId = uuidv4();
+    
+    // IMPORTANT: Create empty message list FIRST before anything else
+    localStorage.setItem(`chat_${newChatId}`, JSON.stringify([]));
+    
+    // Save current messages if needed (do this after setting the empty array)
     if (messages.length > 0 && chatId) {
       localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
     }
-    
-    // Generate new chat ID
-    const newChatId = uuidv4();
     
     // Add new chat to saved chats
     const newChat: ChatInfo = {
@@ -474,27 +520,24 @@ export default function Page() {
     
     // Set as current chat
     localStorage.setItem("currentChatId", newChatId);
-    setChatId(newChatId);
     
-    // Clear messages and refresh page to start a new chat
-    localStorage.removeItem("chatMessages"); // Clear the default storage
-    window.location.href = window.location.pathname; // Refresh the page
+    // Completely reset the application state by using replace instead of reload
+    // This ensures a clean slate with no history
+    window.location.replace(window.location.pathname);
   };
 
   // Function to switch to a different chat
   const switchToChat = (selectedChatId: string) => {
-    // Save current messages
+    // Save current messages first
     if (messages.length > 0 && chatId) {
       localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
     }
     
     // Set selected chat as current
     localStorage.setItem("currentChatId", selectedChatId);
-    setChatId(selectedChatId);
-    setShowChatSwitcher(false);
     
-    // Refresh the page to load the selected chat
-    window.location.href = window.location.pathname;
+    // Completely reset the application state using replace
+    window.location.replace(window.location.pathname);
   };
 
   // Update chat metadata when messages change
