@@ -6,16 +6,16 @@ import rehypeRaw from "rehype-raw";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 // Import footnotes as a default import to avoid type issues
-import remarkFootnotes from "remark-footnotes";
+// import remarkFootnotes from "remark-footnotes";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
 import DOMPurify from "dompurify";
-import prettier from "prettier/standalone";
-import parserBabel from "prettier/parser-babel";
+// import prettier from "prettier/standalone";
+// import parserBabel from "prettier/parser-babel";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus,twilight , coldarkDark} from "react-syntax-highlighter/dist/cjs/styles/prism";
-import Image from "next/image";
+import { vscDarkPlus} from "react-syntax-highlighter/dist/cjs/styles/prism";
+// import Image from "next/image";
 
 // Import KaTeX CSS for math rendering
 import 'katex/dist/katex.min.css';
@@ -27,34 +27,34 @@ import {
   Check,
   Globe,
   Play,
-  Share2,
+  // Share2,
   ArrowUp,
   Info,
   RotateCw,
-  MessageCircleX,
-  FileText,
-  Sparkle,
+  // MessageCircleX,
+  // FileText,
+  // Sparkle,
   Sparkles,
   Square,
   Paintbrush,
   Mic,
-  MicOff,
+  // MicOff,
   X,
   Volume2,
   VolumeX,
   ChevronDown,
 } from "lucide-react";
 
-import { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu";
+// import { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu";
 import { Editor, Tldraw, TLUiComponents } from "tldraw";
 import "tldraw/tldraw.css";
 
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
+// import { jsPDF } from "jspdf";
+// import html2canvas from "html2canvas";
 
-import styles from "~/app/chat.module.css";
-import { Attachment } from "ai";
-import { useRouter } from "next/navigation";
+// import styles from "~/app/chat.module.css";
+// import { Attachment } from "ai";
+// import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { createPDF } from "../utils/createPDF"; // <-- Added import for PDF conversion
 
@@ -173,13 +173,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         components={{
           code({ node, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
+            console.log(node)
             return match ? (
               <SyntaxHighlighter
                 style={vscDarkPlus}
                 language={match[1]}
                 PreTag="div"
                 className="rounded-md"
-                {...props as any}
+                {...props as unknown as object}
               >
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
@@ -264,7 +265,7 @@ interface VisionText {
   };
 }
 
-type Checked = DropdownMenuCheckboxItemProps["checked"];
+// type Checked = DropdownMenuCheckboxItemProps["checked"];
 
 // Model options
 const MODEL_OPTIONS = [
@@ -291,7 +292,7 @@ export default function Page() {
   const [searchLinks, setSearchLinks] = useState<string[]>([]);
 
   const [showWhiteboard, setShowWhiteboard] = useState(false);
-  const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
+  // const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
   const whiteboardRef = useRef<HTMLDivElement>(null);
   const tldrawEditor = useRef<Editor | null>(null);
 
@@ -299,9 +300,9 @@ export default function Page() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenForMessageId, setRegenForMessageId] = useState<string | null>(null);
 
-  const [showStatusBar, setShowStatusBar] = React.useState<Checked>(true);
-  const [showActivityBar, setShowActivityBar] = React.useState<Checked>(false);
-  const [showPanel, setShowPanel] = React.useState<Checked>(false);
+  // const [showStatusBar, setShowStatusBar] = React.useState<Checked>(true);
+  // const [showActivityBar, setShowActivityBar] = React.useState<Checked>(false);
+  // const [showPanel, setShowPanel] = React.useState<Checked>(false);
 
   const [chatId, setChatId] = useState<string | undefined>(undefined);
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
@@ -309,13 +310,15 @@ export default function Page() {
   // New state for chat management
   const [showChatSwitcher, setShowChatSwitcher] = useState(false);
   const [savedChats, setSavedChats] = useState<ChatInfo[]>([]);
-  const router = useRouter();
+  // const router = useRouter();
 
   const [showActionButtons, setShowActionButtons] = useState(false);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+  console.log(setHideTimeout)
 
   // Voice mode states
   const [isVoiceMode, setIsVoiceMode] = useState(false);
+  console.log(setIsVoiceMode)
   const [isRecording, setIsRecording] = useState(false);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -324,17 +327,18 @@ export default function Page() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  const handleMouseEnter = () => {
-    if (hideTimeout) clearTimeout(hideTimeout);
-    setShowActionButtons(true);
-  };
+  // const handleMouseEnter = () => {
+  //   if (hideTimeout) clearTimeout(hideTimeout);
+  //   setShowActionButtons(true);
+  // };
 
-  const handleMouseLeave = () => {
-    const timeout = setTimeout(() => {
-      setShowActionButtons(false);
-    }, 1000); // 1000ms delay to give enough time to reach the buttons
-    setHideTimeout(timeout);
-  };
+
+  // const handleMouseLeave = () => {
+  //   const timeout = setTimeout(() => {
+  //     setShowActionButtons(false);
+  //   }, 1000); // 1000ms delay to give enough time to reach the buttons
+  //   setHideTimeout(timeout);
+  // };
 
   // Get the chat hook first before any code uses 'messages'
   const { messages, input, handleInputChange, handleSubmit, setInput } = useChat({
@@ -345,6 +349,7 @@ export default function Page() {
     onResponse: (response) => {
       setIsLoading(false);
       // Only reset input if NOT using the deepseek model to prevent refresh loop
+      console.log(response)
       if (selectedModel !== "deepseek/deepseek-chat:free") {
         resetInputField();
       }
@@ -597,13 +602,13 @@ export default function Page() {
     }
   };
 
-  const toggleVoiceMode = () => {
-    setIsVoiceMode(prev => !prev);
-    // Reset any ongoing recording if turning off voice mode
-    if (isVoiceMode && isRecording) {
-      stopRecording();
-    }
-  };
+  // const toggleVoiceMode = () => {
+  //   setIsVoiceMode(prev => !prev);
+  //   // Reset any ongoing recording if turning off voice mode
+  //   if (isVoiceMode && isRecording) {
+  //     stopRecording();
+  //   }
+  // };
 
   const playResponseAudio = async (text: string) => {
     // Don't try to play if already playing
@@ -689,6 +694,8 @@ export default function Page() {
       return false;
     }
   };
+
+  console.log(submitMessage)
 
   // -----------------------------------------------------------------------
   // PDF Export Function
@@ -970,7 +977,7 @@ export default function Page() {
       alert("Error sharing chat. Please try again later.");
     }
   };
-
+  console.log(shareChat)
   const regenerateQuery = (query: string, messageId: string) => {
     setRegenForMessageId(messageId);
     setIsRegenerating(true);
@@ -988,9 +995,9 @@ export default function Page() {
     }, 10);
   };
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // const scrollToTop = () => {
+  //   window.scrollTo({ top: 0, behavior: "smooth" });
+  // };
 
   // Remove the mouse move event listener as it's causing conflicts
   useEffect(() => {

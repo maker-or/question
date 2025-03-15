@@ -186,14 +186,14 @@ export const createPDF = (messages: Message[]): void => {
 
     {
       // Enhanced table extraction - processes markdown tables properly
-      const tableRegex = /^\|(.+)\|$/gm;
-      let tableMatch;
+      // const tableRegex = /^\|(.+)\|$/gm;
+      // let tableMatch;
       let tableBuffer = [];
       let inTable = false;
       
       // Process content line by line to detect and extract tables
       const lines = processedContent.split('\n');
-      let newContent = [];
+      const newContent = [];
       
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -452,7 +452,7 @@ export const createPDF = (messages: Message[]): void => {
         // Add new page
         doc.addPage();
         y = margin + 22;
-        const currentPageStart = y;
+        // const currentPageStart = y;
         
         // Draw new code block background on new page
         const remainingHeight = Math.min(
@@ -510,7 +510,7 @@ export const createPDF = (messages: Message[]): void => {
         
         // Split the line into segments for highlighting
         let lastIndex = 0;
-        let segments: {text: string, color: number[]}[] = [];
+        const segments: {text: string, color: number[]}[] = [];
         
         // Find keywords
         let keywordMatch;
@@ -806,6 +806,7 @@ const renderTable = (
     
     return currentY + LINE_HEIGHT;
   };
+  console.log(renderInlineMath)
 
   // Improved rendering for inline code
   // const renderInlineCode = (
@@ -861,8 +862,11 @@ const renderTable = (
     mathExpressions: MathExpression[],
     tables: string[][][],
     inlineCodes: { index: number; code: string }[]
-  ): number | any => {
+     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  ): number | any  => {
     // Handle headings with improved formatting and spacing
+    console.log(tables)
+    console.log(inlineCodes)
     if (line.match(/^<<H1>>(.*)<<H1>>$/)) {
       const text: string = line.replace(/^<<H1>>(.*)<<H1>>$/, "$1");
       // Add subtle underline for H1 headings
@@ -958,7 +962,7 @@ const renderTable = (
       doc.addPage();
       y = margin + 20;
     }
-
+    console.log(index)
     // Display bold orange header for user messages
     if (message.role === "user") {
       doc.setFont("Helvetica", "bold");
@@ -1030,11 +1034,13 @@ const renderTable = (
           y += LINE_HEIGHT / 2;
           prevWasSpecialBlock = false;
         } else {
-          y = renderStyledText(doc, part, margin, y, pageWidth - margin * 2, mathExpressions, tables, inlineCodes);
+          if (typeof y === 'number') {
+            y = renderStyledText(doc, part, margin, y as number, pageWidth - margin * 2, mathExpressions, tables, inlineCodes);
+          }
           prevWasSpecialBlock = false;
         }
 
-        if (y > pageHeight - margin - 40) {
+        if (typeof y === 'number' && y > pageHeight - margin - 40) {
           doc.addPage();
           y = margin + 20;
         }

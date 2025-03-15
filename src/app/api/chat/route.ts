@@ -1,6 +1,6 @@
-import { createOpenAI } from '@ai-sdk/openai';
+// import { createOpenAI } from '@ai-sdk/openai';
 //import Groq from "groq-sdk"; // Ensure this package is installed
-import { streamText, smoothStream ,generateText,wrapLanguageModel, extractReasoningMiddleware} from 'ai';
+import { streamText ,generateText,wrapLanguageModel, extractReasoningMiddleware} from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { getEmbedding } from '../../../../utils/embeddings';
@@ -68,10 +68,10 @@ export async function POST(req: Request): Promise<Response> {
     else{console.log("no attachments found")}
 
     // First, let's ask the LLM to decide whether to use RAG or not
-    const groq = createOpenAI({
-      baseURL: 'https://api.groq.com/openai/v1',
-      apiKey: process.env.GROQ_API_KEY,
-    });
+    // const groq = createOpenAI({
+    //   baseURL: 'https://api.groq.com/openai/v1',
+    //   apiKey: process.env.GROQ_API_KEY,
+    // });
 
     const openrouter = createOpenRouter({
       apiKey: process.env.OPENROUTE_API_KEY,

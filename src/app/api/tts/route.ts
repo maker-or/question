@@ -1,4 +1,4 @@
-import { createOpenAI } from '@ai-sdk/openai';
+// import { createOpenAI } from '@ai-sdk/openai';
 import { NextRequest } from 'next/server';
 import OpenAI from "openai";
 
@@ -21,10 +21,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
 
     // Initialize Groq client
-    const groq = createOpenAI({
-      baseURL: 'https://api.groq.com/openai/v1',
-      apiKey: process.env.GROQ_API_KEY,
-    });
+    // const groq = createOpenAI({
+    //   baseURL: 'https://api.groq.com/openai/v1',
+    //   apiKey: process.env.GROQ_API_KEY,
+    // });
 
     // Call TTS API to generate speech
     // const openai = new OpenAI();
