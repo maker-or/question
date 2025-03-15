@@ -14,7 +14,7 @@ import DOMPurify from "dompurify";
 import prettier from "prettier/standalone";
 import parserBabel from "prettier/parser-babel";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { vscDarkPlus,twilight , coldarkDark} from "react-syntax-highlighter/dist/cjs/styles/prism";
 import Image from "next/image";
 
 // Import KaTeX CSS for math rendering
@@ -1288,7 +1288,7 @@ export default function Page() {
                   className="animate-slide-in group relative mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="max-w-[85vw] text-[1.4em] tracking-tight font-serif rounded-t-3xl rounded-br-3xl bg-[#2D2E30] text-[#E8E8E6] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3">
+                  <div className="max-w-[85vw] text-[1.4em] tracking-tight font-serif rounded-t-3xl rounded-br-3xl bg-[#1F2937] text-[#E8E8E6] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3">
                     <MarkdownRenderer content={m.content} />
                   </div>
                 </div>
