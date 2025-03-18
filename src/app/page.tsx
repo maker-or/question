@@ -58,6 +58,10 @@ import "tldraw/tldraw.css";
 import { v4 as uuidv4 } from "uuid";
 import { createPDF } from "../utils/createPDF"; // <-- Added import for PDF conversion
 
+// Add this import near the top with other imports
+// import { useTheme } from "next-themes";
+import { ThemeToggle } from "../components/theme-toggle";
+
 // Add new ChatInfo interface
 interface ChatInfo {
   id: string;
@@ -148,7 +152,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
     .replace(/\\omega/g, "ω");
 
   return (
-    <div className="prose prose-invert max-w-none">
+    <div className="prose max-w-none dark:prose-invert">
       <ReactMarkdown
         remarkPlugins={[
           remarkGfm,
@@ -351,6 +355,9 @@ export default function Page() {
 
   const [showDesktopOnlyModal, setShowDesktopOnlyModal] = useState(false);
   const isMobile = useIsMobile();
+
+  // Get theme from next-themes instead
+  // const { theme } = useTheme();
 
   // const handleMouseEnter = () => {
   //   if (hideTimeout) clearTimeout(hideTimeout);
@@ -1184,7 +1191,7 @@ export default function Page() {
       {/* Update your action buttons panel to include a "New Chat" button */}
       {showActionButtons && (
         <div
-          className="fixed bottom-16 right-1 z-20 p-3 backdrop-blur-md rounded-lg shadow-lg border border-[#f7eee332] max-w-[90vw] sm:max-w-xs"
+          className="fixed bottom-16 right-1 z-20 p-3 backdrop-blur-md rounded-lg shadow-lg border border-[#f7eee332] max-w-[90vw] sm:max-w-xs bg-[#151515] dark:bg-[#1a1a1a] transition-all duration-300"
         >
           <div className="flex flex-col gap-1">
             <button
@@ -1211,6 +1218,12 @@ export default function Page() {
             >
               Export to PDF
             </button>
+            
+            {/* Replace the theme toggle button with the new component */}
+            <div className="p-1">
+              <ThemeToggle />
+            </div>
+            
             <button
               onClick={() => setShowActionButtons(false)}
               className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full mt-2"
@@ -1237,15 +1250,15 @@ export default function Page() {
 
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-screen px-4">
-          <h1 className="text-[2em] sm:text-[3em] text-[#f7eee3ca] mb-4 font-serif text-center">What do you want to learn?</h1>
+          <h1 className="text-[2em] sm:text-[3em] dark:text-[#f7eee3ca] text-[#1a1a1a] mb-4 font-['Instrument_Serif'] text-center">What do you want to learn?</h1>
 
 
 
 
           <div className="w-full max-w-2xl px-4">
             <form onSubmit={onSubmit} className="w-full">
-              <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl bg-[#ffffff] p-1  shadow-md transition-all duration-300">
-                <div className="flex relative flex-1  items-center overflow-hidden bg-[#bebdbdde] rounded-xl py-3 sm:py-5 transition-all duration-300">
+              <div className="group flex-col  w-full items-center   rounded-2xl dark:bg-[#ffffff] bg-[#f0f0f0] p-1  shadow-md transition-all duration-300">
+                <div className="flex relative flex-1  items-center overflow-hidden dark:bg-[#bebdbdde] bg-[#ffffff] rounded-xl py-3 sm:py-5 transition-all duration-300">
                   {!isVoiceMode ? (
                     <textarea
                       ref={textareaRef}
@@ -1256,7 +1269,7 @@ export default function Page() {
                         adjustTextareaHeight();
                       }}
                       onKeyDown={handleKeyDown}
-                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-serif px-4 py-2 text-sm text-[#0c0c0c] outline-none transition-all duration-200 placeholder:text-[#0c0c0c] md:text-base"
+                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-['Instrument_Serif'] px-4 py-2 text-sm dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] md:text-base"
                       rows={1}
                     />
                   ) : (
@@ -1266,11 +1279,11 @@ export default function Page() {
                           {isRecording ? (
                             <span className="text-red-500 text-sm">Recording...</span>
                           ) : (
-                            <span className="text-[#f7eee380] text-sm">Ready to record</span>
+                            <span className="dark:text-[#f7eee380] text-[#444444] text-sm">Ready to record</span>
                           )}
                         </div>
                         {transcribedText && (
-                          <div className="max-w-full overflow-x-auto text-[#f7eee3] text-sm py-2">
+                          <div className="max-w-full overflow-x-auto dark:text-[#f7eee3] text-[#0c0c0c] text-sm py-2">
                             {transcribedText}
                           </div>
                         )}
@@ -1325,19 +1338,19 @@ export default function Page() {
                     <button
                       type="button"
                       onClick={() => setShowModelSelector(!showModelSelector)}
-                      className="flex items-center justify-between gap-2 px-3 py-2 text-sm sm:px-4 sm:py-2 sm:text-base rounded-lg bg-[#252525] text-[#f7eee3] transition-colors hover:bg-[#323232]">
+                      className="flex items-center justify-between gap-2 px-3 py-2 text-sm sm:px-4 sm:py-2 sm:text-base rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
                       <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
 
                     {showModelSelector && (
-                      <div className="absolute mt-1 z-10 rounded-md bg-[#1a1a1a] shadow-lg border border-[#383838]">
+                      <div className="absolute mt-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838]">
                         <ul className="py-1">
                           {MODEL_OPTIONS.map((model) => (
                             <li key={model.id}>
                               <button
                                 type="button"
-                                className={`w-full text-left px-4 py-2 hover:bg-[#252525] ${selectedModel === model.id ? 'bg-[#323232] text-[#f7eee3]' : 'text-[#f7eee380]'}`}
+                                className={`w-full text-left px-4 py-2 dark:hover:bg-[#252525] hover:bg-[#f0f0f0] ${selectedModel === model.id ? 'dark:bg-[#323232] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c]' : 'dark:text-[#f7eee380] text-[#444444]'}`}
                                 onClick={() => handleModelChange(model.id)}
                               >
                                 {model.name}
@@ -1348,7 +1361,7 @@ export default function Page() {
                       </div>
                     )}
                   </div>
-                  <button type="button" className="flex m-1 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
+                  <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
                     <Paintbrush className="h-4 w-4" />
                   </button>
 
@@ -1365,7 +1378,7 @@ export default function Page() {
 
               </div>
               {input.length > 0 && !isVoiceMode && (
-                <div className="mt-1.5 flex items-center justify-between px-1 text-xs text-[#f7eee380]">
+                <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
                   <span>{input.length}/2000</span>
                 </div>
@@ -1390,34 +1403,34 @@ export default function Page() {
                   className="animate-slide-in group relative mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="max-w-[95vw] sm:max-w-[85vw] text-[1.2em] sm:text-[1.4em] tracking-tight font-serif rounded-t-3xl rounded-br-3xl bg-[#1F2937] text-[#E8E8E6] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3 p-3">
+                  <div className="max-w-[95vw] sm:max-w-[85vw] text-[1.2em] sm:text-[1.4em] tracking-tight font-['Instrument_Serif'] rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3 p-3">
                     <MarkdownRenderer content={m.content} />
                   </div>
                 </div>
               ) : (
                 <div key={m.id} className="animate-slide-in group relative flex flex-col md:mx-0">
-                  <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[0.9rem] sm:text-[0.95rem] tracking-tight text-[#E8E8E6] md:max-w-2xl md:p-2 md:text-[1.2rem]">
+                  <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[0.9rem] sm:text-[0.95rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.2rem]">
                     <div className="animate-fade-in transition-opacity duration-500">
                       <MarkdownRenderer content={m.content} />
 
                       {/* Model attribution */}
-                      <div className="mt-4 text-xs text-[#f7eee380] italic">
+                      <div className="mt-4 text-xs dark:text-[#f7eee380] text-[#555555] italic">
                         Generated by {getModelDisplayName(selectedModel)}
                       </div>
                     </div>
                     <div className="mb-14 flex flex-wrap gap-1 sm:gap-2">
-                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                         <button onClick={handleSearchWeb} className="text-sm md:text-base">
                           <Globe className="h-4 w-4" />
                         </button>
                       </div>
-                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                         <button onClick={() => handleSearchYouTube(lastQuery)} className="text-sm md:text-base">
                           <Play className="h-4 w-4" />
                         </button>
                       </div>
                       {previousUserMessage && (
-                        <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                        <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                           <button
                             onClick={() => regenerateQuery(previousUserMessage, m.id)}
                             className="text-sm md:text-base"
@@ -1427,19 +1440,19 @@ export default function Page() {
                           </button>
                         </div>
                       )}
-                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                         <button onClick={() => copyMessage(m.content, m.id)} className="text-sm md:text-base">
                           {copiedMessageId === m.id ? (
                             <Check className="h-4 w-4 text-[#48AAFF]" />
                           ) : (
-                            <Copy className="h-4 w-4 text-[#f7eee3] hover:text-[#48AAFF]" />
+                            <Copy className="h-4 w-4 dark:text-[#f7eee3] text-[#0c0c0c] hover:text-[#48AAFF]" />
                           )}
                         </button>
                       </div>
 
                       {/* TTS playback button for assistant messages */}
                       {isVoiceMode && (
-                        <div className="flex items-center justify-center rounded-full p-2 sm:p-3 text-white transition-colors hover:bg-[#294A6D] hover:text-[#48AAFF]">
+                        <div className="flex items-center justify-center rounded-full p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                           <button
                             onClick={() => playResponseAudio(m.content)}
                             className="text-sm md:text-base"
@@ -1459,27 +1472,27 @@ export default function Page() {
               );
             })}
             {searchResults && (
-              <div className="mx-3 overflow-x-hidden rounded-xl border border-[#f7eee332] bg-gradient-to-r from-[#1a1a1a] to-[#252525] p-4 shadow-lg md:mx-0">
+              <div className="mx-3 overflow-x-hidden rounded-xl border border-[#f7eee332] dark:bg-gradient-to-r dark:from-[#1a1a1a] dark:to-[#252525] bg-gradient-to-r from-[#f0f0f0] to-[#ffffff] p-4 shadow-lg md:mx-0">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Globe className="h-5 w-5 flex-shrink-0 text-[#FF5E00]" />
-                    <h3 className="truncate text-base font-medium text-[#E8E8E6] md:text-lg">
+                    <h3 className="truncate text-base font-medium dark:text-[#E8E8E6] text-[#0c0c0c] md:text-lg">
                       Web Search Results
                     </h3>
                   </div>
                   <div className="group relative">
-                    <button className="flex items-center gap-2 rounded-full bg-[#4544449d] px-3 py-1.5 text-white transition-colors duration-200 hover:bg-[#FF5E00]">
+                    <button className="flex items-center gap-2 rounded-full bg-[#4544449d] px-3 py-1.5 dark:text-white text-[#0c0c0c] transition-colors duration-200 dark:hover:bg-[#FF5E00] hover:bg-[#FF5E00]">
                       <span className="text-sm">Sources</span>
                       <Info className="h-4 w-4" />
                     </button>
-                    <div className="absolute right-0 z-10 mt-2 hidden w-max max-w-[300px] rounded-lg border border-[#f7eee332] bg-[#1a1a1a] p-2 shadow-xl group-hover:block">
+                    <div className="absolute right-0 z-10 mt-2 hidden w-max max-w-[300px] rounded-lg border border-[#f7eee332] dark:bg-[#1a1a1a] bg-[#ffffff] p-2 shadow-xl group-hover:block">
                       {searchLinks.map((link, index) => (
                         <a
                           key={index}
                           href={link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block truncate rounded-lg px-3 py-2 text-sm text-[#E8E8E6] hover:bg-[#252525]"
+                          className="block truncate rounded-lg px-3 py-2 text-sm dark:text-[#E8E8E6] text-[#0c0c0c] dark:hover:bg-[#252525] hover:bg-[#f0f0f0]"
                         >
                           {link}
                         </a>
@@ -1487,7 +1500,7 @@ export default function Page() {
                     </div>
                   </div>
                 </div>
-                <div className="prose prose-sm md:prose-base prose-invert max-w-none">
+                <div className="prose prose-sm md:prose-base dark:prose-invert prose-gray max-w-none">
                   <MarkdownRenderer content={searchResults} />
                 </div>
               </div>
@@ -1497,17 +1510,14 @@ export default function Page() {
 
           <div
             className={`flex sticky bottom-0 z-10 flex-row gap-3 items-center justify-center ${showWhiteboard ? "right-[33.333%]" : "right-0"
-              } left-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c80] to-transparent p-2 sm:p-4 transition-all duration-300`}
+              } left-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)/80] to-transparent p-2 sm:p-4 transition-all duration-300`}
           >
-            {/* Model selector in the bottom bar */}
-
-
             <form
               onSubmit={onSubmit}
               className={`mx-auto w-full ${showWhiteboard ? "max-w-full px-2 sm:px-4" : "max-w-2xl px-2 sm:px-3 md:px-0"}`}
             >
-               <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl bg-[#ffffff] p-1  shadow-md transition-all duration-300">
-                <div className="flex relative flex-1  items-center overflow-hidden bg-[#bebdbdde] rounded-xl py-3 sm:py-5 transition-all duration-300">
+              <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl dark:bg-[#ffffff] bg-[#f0f0f0] p-1  shadow-md transition-all duration-300">
+                <div className="flex relative flex-1  items-center overflow-hidden dark:bg-[#bebdbdde] bg-[#ffffff] rounded-xl py-3 sm:py-5 transition-all duration-300">
                   {!isVoiceMode ? (
                     <textarea
                       ref={textareaRef}
@@ -1518,7 +1528,7 @@ export default function Page() {
                         adjustTextareaHeight();
                       }}
                       onKeyDown={handleKeyDown}
-                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-serif px-4 py-2 text-sm text-[#0c0c0c] outline-none transition-all duration-200 placeholder:text-[#0c0c0c] md:text-base"
+                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-['Instrument_Serif'] px-4 py-2 text-sm dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] md:text-base"
                       rows={1}
                     />
                   ) : (
@@ -1528,11 +1538,11 @@ export default function Page() {
                           {isRecording ? (
                             <span className="text-red-500 text-sm">Recording...</span>
                           ) : (
-                            <span className="text-[#f7eee380] text-sm">Ready to record</span>
+                            <span className="dark:text-[#f7eee380] text-[#444444] text-sm">Ready to record</span>
                           )}
                         </div>
                         {transcribedText && (
-                          <div className="max-w-full overflow-x-auto text-[#f7eee3] text-sm py-2">
+                          <div className="max-w-full overflow-x-auto dark:text-[#f7eee3] text-[#0c0c0c] text-sm py-2">
                             {transcribedText}
                           </div>
                         )}
@@ -1587,19 +1597,19 @@ export default function Page() {
                     <button
                       type="button"
                       onClick={() => setShowModelSelector(!showModelSelector)}
-                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm sm:px-4 sm:py-2 rounded-lg bg-[#252525] text-[#f7eee3] transition-colors hover:bg-[#323232]">
+                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm sm:px-4 sm:py-2 rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
                       <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
 
                     {showModelSelector && (
-                      <div className="absolute mt-1 z-10 rounded-md bg-[#1a1a1a] shadow-lg border border-[#383838]">
+                      <div className="absolute mt-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838]">
                         <ul className="py-1">
                           {MODEL_OPTIONS.map((model) => (
                             <li key={model.id}>
                               <button
                                 type="button"
-                                className={`w-full text-left px-4 py-2 hover:bg-[#252525] ${selectedModel === model.id ? 'bg-[#323232] text-[#f7eee3]' : 'text-[#f7eee380]'}`}
+                                className={`w-full text-left px-4 py-2 dark:hover:bg-[#252525] hover:bg-[#f0f0f0] ${selectedModel === model.id ? 'dark:bg-[#323232] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c]' : 'dark:text-[#f7eee380] text-[#444444]'}`}
                                 onClick={() => handleModelChange(model.id)}
                               >
                                 {model.name}
@@ -1610,7 +1620,7 @@ export default function Page() {
                       </div>
                     )}
                   </div>
-                  <button type="button" className="flex m-1 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
+                  <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
                     <Paintbrush className="h-4 w-4" />
                   </button>
 
@@ -1628,7 +1638,7 @@ export default function Page() {
               </div>
 
               {input.length > 0 && !isVoiceMode && (
-                <div className="mt-1.5 flex items-center justify-between px-1 text-xs text-[#f7eee380]">
+                <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
                   <span>{input.length}/2000</span>
                 </div>
@@ -1643,7 +1653,7 @@ export default function Page() {
       {showWhiteboard && (
         <div
           ref={whiteboardRef}
-          className="fixed right-0 top-0 z-20 h-[100svh] w-full border-l border-[#f7eee332] md:w-1/3 bg-[#1a1a1a]"
+          className="fixed right-0 top-0 z-20 h-[100svh] w-full border-l border-[#f7eee332] md:w-1/3 dark:bg-[#1a1a1a] bg-[#f0f0f0]"
           style={{ touchAction: "none" }}
         >
           <Tldraw
@@ -1657,7 +1667,7 @@ export default function Page() {
           />
           <button
             onClick={() => setShowWhiteboard(false)}
-            className="absolute top-0 right-0 z-30 flex items-center justify-center gap-2 rounded-bl-xl bg-[#1A1A1C] p-3 text-sm text-[#f7eee3] hover:bg-[#575757]"
+            className="absolute top-0 right-0 z-30 flex items-center justify-center gap-2 rounded-bl-xl dark:bg-[#1A1A1C] bg-[#e2e2e2] p-3 text-sm dark:text-[#f7eee3] text-[#0c0c0c] dark:hover:bg-[#575757] hover:bg-[#d0d0d0]"
           >
             Close
           </button>
