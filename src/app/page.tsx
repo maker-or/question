@@ -1200,27 +1200,27 @@ export default function Page() {
           <div className="flex flex-col gap-1">
             <button
               onClick={createNewChat}
-              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
+              className="flex items-start justify-center gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             ><Plus className="w-5 h-5" />
               New Chat
             </button>
             <button
               onClick={() => setShowChatSwitcher(true)}
-              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
+              className="flex items-center justify-center gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             >
             <ArrowLeftRight className="w-4 h-4"/>
               Switch Chat
             </button>
             <button
               onClick={handleClearHistory}
-              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
+              className="flex items-center justify-center gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             >
               <Trash className="h-4 w-4" />
               Delete Chat
             </button>
             <button
               onClick={() => createPDF(messages)}
-              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
+              className="flex items-center justify-center gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             >
              <FileText className="w-4 h-4" /> Export to PDF
             </button>
@@ -1232,7 +1232,7 @@ export default function Page() {
             
             <button
               onClick={() => setShowActionButtons(false)}
-              className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full mt-2"
+              className="flex items-center justify-center gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full mt-2"
             >
               <X className="w-5 h-5" />
               Close Menu
