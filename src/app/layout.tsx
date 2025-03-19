@@ -16,8 +16,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "sphere",
-  description: "your collage your AI",
+  title: "sphereai",
+  description: "The AI chat app for students. which helps students to get the answer of their queries.",
+  icons:"/favicon.ico",
+  
 };
 
 export default function RootLayout({

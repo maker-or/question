@@ -156,7 +156,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
     .replace(/\\omega/g, "ω");
 
   return (
-    <div className="prose max-w-none dark:prose-invert">
+    <div className="prose max-w-none dark:prose-invert prose-lg">
       <ReactMarkdown
         remarkPlugins={[
           remarkGfm,
@@ -187,13 +187,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
                 style={vscDarkPlus}
                 language={match[1]}
                 PreTag="div"
-                className="rounded-md"
+                className="rounded-md text-base md:text-lg"
                 {...props as unknown as object}
               >
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             ) : (
-              <code className={className} {...props}>
+              <code className={`${className} text-base md:text-lg`} {...props}>
                 {children}
               </code>
             );
@@ -209,42 +209,45 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
                   loading="lazy"
                   {...props}
                 />
-                {alt && <span className="block text-center text-sm text-gray-500 mt-1">{alt}</span>}
+                {alt && <span className="block text-center text-sm md:text-base text-gray-500 mt-1">{alt}</span>}
               </span>
             ) : null;
           },
           table({ children }) {
             return (
               <div className="overflow-x-auto my-4">
-                <table className="border-collapse w-full border border-gray-700">
+                <table className="border-collapse w-full border border-gray-700 text-base md:text-lg">
                   {children}
                 </table>
               </div>
             );
           },
           th({ children }) {
-            return <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left">{children}</th>;
+            return <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left text-base md:text-lg">{children}</th>;
           },
           td({ children }) {
-            return <td className="border border-gray-700 px-4 py-2">{children}</td>;
+            return <td className="border border-gray-700 px-4 py-2 text-base md:text-lg">{children}</td>;
           },
           blockquote({ children }) {
-            return <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4">{children}</blockquote>;
+            return <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-lg md:text-xl">{children}</blockquote>;
           },
           h1({ children }) {
-            return <h1 className="text-2xl font-bold mt-6 mb-4">{children}</h1>;
+            return <h1 className="text-3xl font-bold mt-6 mb-4">{children}</h1>;
           },
           h2({ children }) {
-            return <h2 className="text-xl font-bold mt-5 mb-3">{children}</h2>;
+            return <h2 className="text-2xl font-bold mt-5 mb-3">{children}</h2>;
           },
           h3({ children }) {
-            return <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>;
+            return <h3 className="text-xl font-semibold mt-4 mb-2">{children}</h3>;
           },
           ul({ children }) {
-            return <ul className="list-disc list-inside pl-4 my-4 space-y-2">{children}</ul>;
+            return <ul className="list-disc list-inside pl-4 my-4 space-y-2 text-base md:text-lg">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="list-decimal list-inside pl-4 my-4 space-y-2">{children}</ol>;
+            return <ol className="list-decimal list-inside pl-4 my-4 space-y-2 text-base md:text-lg">{children}</ol>;
+          },
+          p({ children }) {
+            return <p className="text-base md:text-lg my-3">{children}</p>;
           }
         }}
       >
@@ -1109,7 +1112,7 @@ export default function Page() {
   };
 
   return (
-    <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300`}>
+    <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300 text-base`}>
       {/* Desktop-only modal for whiteboard */}
       {showDesktopOnlyModal && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -1257,7 +1260,7 @@ export default function Page() {
 
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-screen px-4">
-          <h1 className="text-[2em] sm:text-[3em] dark:text-[#f7eee3ca] text-[#1a1a1a] mb-4 font-['Instrument_Serif'] text-center">What do you want to learn?</h1>
+          <h1 className="text-[2.5em] sm:text-[3.5em] dark:text-[#f7eee3ca] text-[#1a1a1a] mb-4 font-['Instrument_Serif'] text-center leading-tight">What do you want to learn?</h1>
 
 
 
@@ -1276,7 +1279,7 @@ export default function Page() {
                         adjustTextareaHeight();
                       }}
                       onKeyDown={handleKeyDown}
-                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-['Instrument_Serif'] px-4 py-2 text-sm dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] md:text-base"
+                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-['Instrument_Serif'] px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060]"
                       rows={1}
                     />
                   ) : (
@@ -1284,13 +1287,13 @@ export default function Page() {
                       <div className={`flex flex-col items-center ${isRecording ? 'animate-pulse' : ''}`}>
                         <div className="text-center mb-2">
                           {isRecording ? (
-                            <span className="text-red-500 text-sm">Recording...</span>
+                            <span className="text-red-500 text-base">Recording...</span>
                           ) : (
-                            <span className="dark:text-[#f7eee380] text-[#444444] text-sm">Ready to record</span>
+                            <span className="dark:text-[#f7eee380] text-[#444444] text-base">Ready to record</span>
                           )}
                         </div>
                         {transcribedText && (
-                          <div className="max-w-full overflow-x-auto dark:text-[#f7eee3] text-[#0c0c0c] text-sm py-2">
+                          <div className="max-w-full overflow-x-auto dark:text-[#f7eee3] text-[#0c0c0c] text-base py-2">
                             {transcribedText}
                           </div>
                         )}
@@ -1345,7 +1348,7 @@ export default function Page() {
                     <button
                       type="button"
                       onClick={() => setShowModelSelector(!showModelSelector)}
-                      className="flex items-center justify-between gap-2 px-3 py-2 text-sm sm:px-4 sm:py-2 sm:text-base rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
+                      className="flex items-center justify-between gap-2 px-3 py-2 text-base sm:px-4 sm:py-2 sm:text-lg rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
                       <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
@@ -1390,7 +1393,7 @@ export default function Page() {
                   <span>{input.length}/2000</span>
                 </div>
               )}
-              {error && <div className="mt-2 text-center text-sm text-red-500">{error}</div>}
+              {error && <div className="mt-2 text-center text-base text-red-500">{error}</div>}
             </form>
           </div>
         </div>
@@ -1410,49 +1413,49 @@ export default function Page() {
                   className="animate-slide-in group relative mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="max-w-[95vw] sm:max-w-[85vw] text-[1.2em] sm:text-[1.4em] tracking-tight font-['Instrument_Serif'] rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2em] line-clamp-3 p-3">
+                  <div className="max-w-[95vw] sm:max-w-[85vw] text-[1.4em] sm:text-[1.6em] tracking-tight font-['Instrument_Serif'] rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2.2em] p-3">
                     <MarkdownRenderer content={m.content} />
                   </div>
                 </div>
               ) : (
                 <div key={m.id} className="animate-slide-in group relative flex flex-col md:mx-0">
-                  <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[0.9rem] sm:text-[0.95rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.2rem]">
+                  <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[1.1rem] sm:text-[1.2rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.4rem]">
                     <div className="animate-fade-in transition-opacity duration-500">
                       <MarkdownRenderer content={m.content} />
 
                       {/* Model attribution */}
-                      <div className="mt-4 text-xs dark:text-[#f7eee380] text-[#555555] italic">
+                      <div className="mt-4 text-sm md:text-base dark:text-[#f7eee380] text-[#555555] italic">
                         Generated by {getModelDisplayName(selectedModel)}
                       </div>
                     </div>
                     <div className="mb-14 flex flex-wrap gap-1 sm:gap-2">
                       <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
-                        <button onClick={handleSearchWeb} className="text-sm md:text-base">
-                          <Globe className="h-4 w-4" />
+                        <button onClick={handleSearchWeb} className="text-base md:text-lg">
+                          <Globe className="h-5 w-5" />
                         </button>
                       </div>
                       <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
-                        <button onClick={() => handleSearchYouTube(lastQuery)} className="text-sm md:text-base">
-                          <Play className="h-4 w-4" />
+                        <button onClick={() => handleSearchYouTube(lastQuery)} className="text-base md:text-lg">
+                          <Play className="h-5 w-5" />
                         </button>
                       </div>
                       {previousUserMessage && (
                         <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                           <button
                             onClick={() => regenerateQuery(previousUserMessage, m.id)}
-                            className="text-sm md:text-base"
+                            className="text-base md:text-lg"
                             // disabled={regenForMessageId === m.id || isLoading}
                           >
-                            {regenForMessageId === m.id ? " " : <RotateCw className="h-4 w-4" />}
+                            {regenForMessageId === m.id ? " " : <RotateCw className="h-5 w-5" />}
                           </button>
                         </div>
                       )}
                       <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
-                        <button onClick={() => copyMessage(m.content, m.id)} className="text-sm md:text-base">
+                        <button onClick={() => copyMessage(m.content, m.id)} className="text-base md:text-lg">
                           {copiedMessageId === m.id ? (
-                            <Check className="h-4 w-4 text-[#48AAFF]" />
+                            <Check className="h-5 w-5 text-[#48AAFF]" />
                           ) : (
-                            <Copy className="h-4 w-4 dark:text-[#f7eee3] text-[#0c0c0c] hover:text-[#48AAFF]" />
+                            <Copy className="h-5 w-5 dark:text-[#f7eee3] text-[#0c0c0c] hover:text-[#48AAFF]" />
                           )}
                         </button>
                       </div>
@@ -1462,13 +1465,13 @@ export default function Page() {
                         <div className="flex items-center justify-center rounded-full p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                           <button
                             onClick={() => playResponseAudio(m.content)}
-                            className="text-sm md:text-base"
+                            className="text-base md:text-lg"
                             disabled={isPlaying}
                           >
                             {isPlaying ? (
-                              <VolumeX className="h-4 w-4 text-[#48AAFF] animate-pulse" />
+                              <VolumeX className="h-5 w-5 text-[#48AAFF] animate-pulse" />
                             ) : (
-                              <Volume2 className="h-4 w-4" />
+                              <Volume2 className="h-5 w-5" />
                             )}
                           </button>
                         </div>
@@ -1482,15 +1485,15 @@ export default function Page() {
               <div className="mx-3 overflow-x-hidden rounded-xl border border-[#f7eee332] dark:bg-gradient-to-r dark:from-[#1a1a1a] dark:to-[#252525] bg-gradient-to-r from-[#f0f0f0] to-[#ffffff] p-4 shadow-lg md:mx-0">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 flex-shrink-0 text-[#FF5E00]" />
-                    <h3 className="truncate text-base font-medium dark:text-[#E8E8E6] text-[#0c0c0c] md:text-lg">
+                    <Globe className="h-6 w-6 flex-shrink-0 text-[#FF5E00]" />
+                    <h3 className="truncate text-lg font-medium dark:text-[#E8E8E6] text-[#0c0c0c] md:text-xl">
                       Web Search Results
                     </h3>
                   </div>
                   <div className="group relative">
                     <button className="flex items-center gap-2 rounded-full bg-[#4544449d] px-3 py-1.5 dark:text-white text-[#0c0c0c] transition-colors duration-200 dark:hover:bg-[#FF5E00] hover:bg-[#FF5E00]">
-                      <span className="text-sm">Sources</span>
-                      <Info className="h-4 w-4" />
+                      <span className="text-base">Sources</span>
+                      <Info className="h-5 w-5" />
                     </button>
                     <div className="absolute right-0 z-10 mt-2 hidden w-max max-w-[300px] rounded-lg border border-[#f7eee332] dark:bg-[#1a1a1a] bg-[#ffffff] p-2 shadow-xl group-hover:block">
                       {searchLinks.map((link, index) => (
@@ -1499,7 +1502,7 @@ export default function Page() {
                           href={link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block truncate rounded-lg px-3 py-2 text-sm dark:text-[#E8E8E6] text-[#0c0c0c] dark:hover:bg-[#252525] hover:bg-[#f0f0f0]"
+                          className="block truncate rounded-lg px-3 py-2 text-base dark:text-[#E8E8E6] text-[#0c0c0c] dark:hover:bg-[#252525] hover:bg-[#f0f0f0]"
                         >
                           {link}
                         </a>
@@ -1507,7 +1510,7 @@ export default function Page() {
                     </div>
                   </div>
                 </div>
-                <div className="prose prose-sm md:prose-base dark:prose-invert prose-gray max-w-none">
+                <div className="prose prose-base md:prose-lg dark:prose-invert prose-gray max-w-none">
                   <MarkdownRenderer content={searchResults} />
                 </div>
               </div>
@@ -1535,7 +1538,7 @@ export default function Page() {
                         adjustTextareaHeight();
                       }}
                       onKeyDown={handleKeyDown}
-                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-['Instrument_Serif'] px-4 py-2 text-sm dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] md:text-base"
+                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-['Instrument_Serif'] px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060]"
                       rows={1}
                     />
                   ) : (
@@ -1543,13 +1546,13 @@ export default function Page() {
                       <div className={`flex flex-col items-center ${isRecording ? 'animate-pulse' : ''}`}>
                         <div className="text-center mb-2">
                           {isRecording ? (
-                            <span className="text-red-500 text-sm">Recording...</span>
+                            <span className="text-red-500 text-base">Recording...</span>
                           ) : (
-                            <span className="dark:text-[#f7eee380] text-[#444444] text-sm">Ready to record</span>
+                            <span className="dark:text-[#f7eee380] text-[#444444] text-base">Ready to record</span>
                           )}
                         </div>
                         {transcribedText && (
-                          <div className="max-w-full overflow-x-auto dark:text-[#f7eee3] text-[#0c0c0c] text-sm py-2">
+                          <div className="max-w-full overflow-x-auto dark:text-[#f7eee3] text-[#0c0c0c] text-base py-2">
                             {transcribedText}
                           </div>
                         )}
@@ -1589,7 +1592,7 @@ export default function Page() {
                           className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
                           // disabled={isLoading || isWebSearchLoading}
                         >
-                          {isLoading || isWebSearchLoading ? <Square className="h-5 w-5" fill="#f7eee3" /> : <ArrowUp className="h-4 w-4" />}
+                          {isLoading || isWebSearchLoading ? <Square className="h-6 w-6" fill="#f7eee3" /> : <ArrowUp className="h-5 w-5" />}
                         </button>
                       </div>
 
@@ -1604,9 +1607,9 @@ export default function Page() {
                     <button
                       type="button"
                       onClick={() => setShowModelSelector(!showModelSelector)}
-                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm sm:px-4 sm:py-2 rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
+                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-base sm:px-4 sm:py-2 sm:text-lg rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
                       <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-5 w-5" />
                     </button>
 
                     {showModelSelector && (
@@ -1628,7 +1631,7 @@ export default function Page() {
                     )}
                   </div>
                   <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
-                    <Paintbrush className="h-4 w-4" />
+                    <Paintbrush className="h-5 w-5" />
                   </button>
 
 
@@ -1651,7 +1654,7 @@ export default function Page() {
                 </div>
               )}
 
-              {error && <div className="mt-2 text-center text-sm text-red-500">{error}</div>}
+              {error && <div className="mt-2 text-center text-base text-red-500">{error}</div>}
             </form>
           </div>
         </div>

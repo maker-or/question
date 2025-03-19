@@ -5,6 +5,7 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { getEmbedding } from '../../../../utils/embeddings';
 import { type ConvertibleMessage } from '../../../../utils/types';
+import { DuckDuckGoSearch } from '@langchain/community/tools/duckduckgo_search';
 
 
 // Define a type for the expected request body structure
@@ -16,6 +17,9 @@ interface RequestBody {
 }
 
 export async function POST(req: Request): Promise<Response> {
+
+
+  
   try {
     console.log('Welcome to AI');
     
@@ -142,6 +146,12 @@ Analyze the following query: "${query}" and return the appropriate tag.
             includeMetadata: true,
           });
 
+          const searchTool = new DuckDuckGoSearch();
+          const searchResults = (await searchTool.invoke(query)) as string;
+          console.log("^^^^^^^^^^^^^^")
+          console.log(searchResults)
+          console.log("^^^^^^^^^^^^^^")
+
           if (!queryResponse.matches || queryResponse.matches.length === 0) {
             console.log("No matches found in Pinecone, falling back to general knowledge");
             finalPrompt = `
@@ -157,6 +167,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
             finalPrompt = `
               ${conversationContext}
               Context: ${context}
+              Web Context : ${searchResults}
               Question: ${query}
               Please provide a comprehensive and detailed answer based on the provided context and cite the book name at the end of the response.
               ${isVoiceMode ? 'Since the user is in voice mode, make your response concise and natural for speech.' : ''}
@@ -192,7 +203,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
           system: `
             You are an expert exam assistant named SphereAI designed to provide accurate, detailed, and structured answers to user queries help them to prepare for their exams.  Follow these guidelines:
         
-            1. **Role**: Act as a knowledgeable and helpful assistant don't show the thinking process. just provide the answer.
+            1. **Role**: Act as a knowledgeable and helpful assistant don't show the thinking process. just provide the answer. you will be provided with the context from the web and knowledge base to answer the user query.
             2. **Task**: Answer user questions indetail and explain it clearly answer each question for 15 marks .
             3. **Output Format**:
                - Start with a indetailed explation of the answer.
@@ -215,10 +226,14 @@ Analyze the following query: "${query}" and return the appropriate tag.
                - If the query is unclear, ask for clarification before answering.
             7. **Citations**:
                - Always cite the source of your information at the end of your response, if applicable.
+               - show the citations from the web Context
             8. **Question Generation**:
                - if the user requests you to generate a question, create only a thought-provoking and contextually appropriate question without providing any answers.
           `,
           prompt: finalPrompt,
+          providerOptions: {
+            google: { responseModalities: ['TEXT', 'IMAGE'] },
+          },
         
         });
 
