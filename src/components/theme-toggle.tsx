@@ -25,7 +25,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="flex items-center justify-start gap-2 rounded-lg p-2 bg-[#252525] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200"
+      className="flex items-center justify-start gap-2 rounded-lg p-2  hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200"
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
     >
       {theme === "dark" ? (

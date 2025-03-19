@@ -40,6 +40,10 @@ import {
   Mic,
   // MicOff,
   X,
+  Trash,
+ArrowLeftRight,
+FileText,
+  Plus,
   Volume2,
   VolumeX,
   ChevronDown,
@@ -1197,26 +1201,28 @@ export default function Page() {
             <button
               onClick={createNewChat}
               className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
-            >
+            ><Plus className="w-5 h-5" />
               New Chat
             </button>
             <button
               onClick={() => setShowChatSwitcher(true)}
               className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             >
+            <ArrowLeftRight className="w-4 h-4"/>
               Switch Chat
             </button>
             <button
               onClick={handleClearHistory}
               className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             >
+              <Trash className="h-4 w-4" />
               Delete Chat
             </button>
             <button
               onClick={() => createPDF(messages)}
               className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full"
             >
-              Export to PDF
+             <FileText className="w-4 h-4" /> Export to PDF
             </button>
             
             {/* Replace the theme toggle button with the new component */}
@@ -1228,6 +1234,7 @@ export default function Page() {
               onClick={() => setShowActionButtons(false)}
               className="flex items-start justify-start gap-2 rounded-xl p-3 text-white hover:bg-[#575757] w-full mt-2"
             >
+              <X className="w-5 h-5" />
               Close Menu
             </button>
           </div>
@@ -1344,7 +1351,7 @@ export default function Page() {
                     </button>
 
                     {showModelSelector && (
-                      <div className="absolute mt-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838]">
+                      <div className="absolute bottom-full mb-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838] w-full">
                         <ul className="py-1">
                           {MODEL_OPTIONS.map((model) => (
                             <li key={model.id}>
@@ -1603,7 +1610,7 @@ export default function Page() {
                     </button>
 
                     {showModelSelector && (
-                      <div className="absolute mt-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838]">
+                      <div className="absolute bottom-full mb-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838] w-full">
                         <ul className="py-1">
                           {MODEL_OPTIONS.map((model) => (
                             <li key={model.id}>
