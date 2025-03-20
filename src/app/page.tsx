@@ -34,7 +34,7 @@ import {
   // MessageCircleX,
   // FileText,
   // Sparkle,
-  Sparkles,
+  // Sparkles,
   Square,
   Paintbrush,
   Mic,
@@ -281,10 +281,13 @@ interface VisionText {
 // Model options
 const MODEL_OPTIONS = [
   { id: "google/gemini-2.0-flash-lite-preview-02-05:free", name: "Gemini flash 2.0" },
-  // { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
-  // { id: "deepseek/deepseek-chat:free", name: "DeepSeek v3" },
+  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
+  { id: "deepseek/deepseek-chat:free", name: "DeepSeek v3" },
    { id: "google/gemma-3-27b-it:free", name: "Gemma 3" },
-   { id: "qwen/qwq-32b:free", name: "Qwen 32B" }
+  //  { id: "qwen/qwq-32b:free", name: "Qwen 32B" }
+  { id: "mistralai/mistral-small-3.1-24b-instruct:free", name: "Mistral 3.1 24b" },
+  { id: "microsoft/phi-3-medium-128k-instruct:free", name: "Phi-3" },
+
 
 ];
 
@@ -342,6 +345,7 @@ export default function Page() {
   
   // New state for chat management
   const [showChatSwitcher, setShowChatSwitcher] = useState(false);
+  console.log(showChatSwitcher)
   const [savedChats, setSavedChats] = useState<ChatInfo[]>([]);
   // const router = useRouter();
 
@@ -361,6 +365,7 @@ export default function Page() {
   const audioChunksRef = useRef<Blob[]>([]);
 
   const [showDesktopOnlyModal, setShowDesktopOnlyModal] = useState(false);
+  console.log(showDesktopOnlyModal)
   const isMobile = useIsMobile();
 
   // Get theme from next-themes instead
@@ -553,6 +558,7 @@ export default function Page() {
     // Completely reset the application state using replace
     window.location.replace(window.location.pathname);
   };
+  console.log(switchToChat)
 
   // Update chat metadata when messages change
   const updateChatMetadata = (id: string, chatMessages: typeof messages) => {
@@ -805,7 +811,6 @@ export default function Page() {
   // Chat hook configuration
   // -----------------------------------------------------------------------
 
-  // Move the keyboard shortcuts effect after the chat hook to access messages
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Command+N or Ctrl+N for new chat
@@ -814,7 +819,7 @@ export default function Page() {
         createNewChat();
       }
       
-      // Command+K or Ctrl+K to open chat switcher
+
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setShowChatSwitcher(true);
@@ -825,9 +830,7 @@ export default function Page() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     }
-  }, []); // Remove messages from dependency array since it's not used in the effect
-
-  // Save current chat messages when they change
+  }, []); 
   useEffect(() => {
     if (chatId && messages.length > 0) {
       localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
@@ -868,7 +871,7 @@ export default function Page() {
     try {
       await navigator.clipboard.writeText(content);
       setCopiedMessageId(id);
-      setTimeout(() => setCopiedMessageId(null), 2000);
+      setTimeout(() => setCopiedMessageId(null), 3000);
     } catch (err) {
       console.error("Failed to copy text: ", err);
     }
@@ -1068,7 +1071,7 @@ export default function Page() {
     setError(null);
     setInput(query);
     
-    // Break the cycle with setTimeout
+
     setTimeout(() => {
       const syntheticEvent = {
         preventDefault: () => {},
@@ -1077,24 +1080,21 @@ export default function Page() {
     }, 10);
   };
 
-  // const scrollToTop = () => {
-  //   window.scrollTo({ top: 0, behavior: "smooth" });
-  // };
 
-  // Remove the mouse move event listener as it's causing conflicts
+
   useEffect(() => {
-    // Remove the previous mouse move listener
+  
     return () => {
       if (hideTimeout) clearTimeout(hideTimeout);
     };
   }, [hideTimeout]);
 
-  // Toggle action buttons with persistence
+ 
   const toggleActionButtons = () => {
     setShowActionButtons(prev => !prev);
   };
+  console.log(toggleActionButtons)
 
-  // Update the whiteboard toggle to check for mobile
   const toggleWhiteboard = () => {
     if (isMobile) {
       setShowDesktopOnlyModal(true);
@@ -1111,91 +1111,219 @@ export default function Page() {
     return model ? model.name : "Choose a model";
   };
 
+
+  const [showNav, setShowNav] = useState(false);
+
+  useEffect(() => {
+
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      const handleMouseMove = (e: MouseEvent) => {
+
+        if (e.clientY < 60) {
+          setShowNav(true);
+        } else if (e.clientY > 150) {
+
+          setShowNav(false);
+        }
+      };
+      
+
+      window.addEventListener('mousemove', handleMouseMove);
+      
+
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+      };
+    } else {
+  
+      setShowNav(true);
+    }
+  }, []);
+
+  // Add state for mobile dropdown menu
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  
+  // Toggle mobile menu function
+  const toggleMobileMenu = () => {
+    setShowMobileMenu(prev => !prev);
+  };
+  
+  // Close the menu when an action is clicked
+  const handleMenuAction = (action: () => void) => {
+    action();
+    setShowMobileMenu(false);
+  };
+
   return (
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300 text-base`}>
-      {/* Desktop-only modal for whiteboard */}
-      {showDesktopOnlyModal && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-[#151515] rounded-lg w-full max-w-sm p-6 text-center">
-            <h3 className="text-lg font-medium text-white mb-3">Desktop Feature</h3>
-            <p className="text-gray-300 mb-5">
-              The whiteboard feature works best on desktop devices. Please switch to a desktop computer for the best experience.
-            </p>
-            <button 
-              onClick={() => setShowDesktopOnlyModal(false)}
-              className="w-full py-2 bg-[#48AAFF] hover:bg-[#3a88cc] text-white rounded-lg transition-colors"
-            >
-              Got it
-            </button>
+      {/* Optimized Top Navigation Bar with Mobile Dropdown */}
+      <nav 
+        className={`sticky top-0 z-30 w-full bg-[#f8f8f8] dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-[#f7eee332] backdrop-blur-md shadow-md transition-all duration-300 transform ${
+          showNav || isMobile ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between h-14">
+          <div className="flex items-center space-x-1">
+            <span className="text-black dark:text-white text-lg font-semibold">SphereAI</span>
           </div>
-        </div>
-      )}
-
-      {/* Chat switcher modal */}
-      {showChatSwitcher && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-[#151515] rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Your Chats</h2>
-              <button 
-                onClick={() => setShowChatSwitcher(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                  <X className="h-4 w-4"/>
-              </button>
-            </div>
+          
+          {/* Desktop Actions - hidden on mobile */}
+          <div className="hidden md:flex items-center space-x-2">
+            <button
+              onClick={createNewChat}
+              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
+              aria-label="New Chat"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New</span>
+            </button>
             
-            <div className="p-2 flex-1 overflow-y-auto">
-              {savedChats.length > 0 ? (
-                <div className="space-y-2">
-                  {savedChats
-                    .sort((a, b) => b.updatedAt - a.updatedAt) // Sort by most recent
-                    .map(chat => (
-                      <button
-                        key={chat.id}
-                        onClick={() => switchToChat(chat.id)}
-                        className={`w-full text-left p-3 rounded-lg hover:bg-[#252525] transition-colors ${
-                          chat.id === chatId ? 'bg-[#323232] border border-[#48AAFF]' : ''
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <h3 className="font-medium text-white truncate">{chat.title}</h3>
-                          <span className="text-xs text-gray-400">
-                            {new Date(chat.updatedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {/* {chat.firstMessage && (
-                          <p className="text-sm text-gray-300 mt-1 truncate">{chat.firstMessage}</p>
-                        )} */}
-                        <div className="text-xs text-gray-500 mt-1">
-                          {chat.messageCount} message{chat.messageCount !== 1 ? 's' : ''}
-                        </div>
-                      </button>
-                    ))}
+            <button
+              onClick={() => setShowChatSwitcher(true)}
+              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
+              aria-label="Switch Chat"
+            >
+              <ArrowLeftRight className="w-4 h-4"/>
+              <span>Switch</span>
+            </button>
+            
+            <button
+              onClick={handleClearHistory}
+              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
+              aria-label="Delete Chat"
+            >
+              <Trash className="h-4 w-4" />
+              <span>Delete</span>
+            </button>
+            
+            <button
+              onClick={() => createPDF(messages)}
+              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
+              aria-label="Export to PDF"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Export</span>
+            </button>
+            
+            <button
+              onClick={toggleWhiteboard}
+              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
+              aria-label="Toggle Whiteboard"
+            >
+              <Paintbrush className="h-4 w-4" />
+              <span>Canvas</span>
+            </button>
+            
+            <div className="flex items-center">
+              <ThemeToggle />
+            </div>
+          </div>
+          
+          {/* Mobile Actions */}
+          <div className="flex md:hidden items-center space-x-2">
+            {/* Mobile dropdown toggle */}
+            <div className="relative">
+              <button
+                onClick={toggleMobileMenu}
+                className="flex items-center justify-center rounded-lg p-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors"
+                aria-label="Menu"
+                aria-expanded={showMobileMenu}
+              >
+                <div className="w-5 h-5 flex flex-col justify-between">
+                  <span className={`block h-0.5 w-full bg-current transition-all duration-300 ${showMobileMenu ? 'rotate-45 translate-y-1.5' : ''}`}></span>
+                  <span className={`block h-0.5 w-full bg-current transition-all duration-300 ${showMobileMenu ? 'opacity-0' : 'opacity-100'}`}></span>
+                  <span className={`block h-0.5 w-full bg-current transition-all duration-300 ${showMobileMenu ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  No saved chats. Create a new one with Cmd+N
+              </button>
+              
+              {/* Mobile dropdown menu */}
+              {showMobileMenu && (
+                <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-[#252525] ring-1 ring-black ring-opacity-5 z-50 origin-top-right">
+                  <div className="py-1" role="menu" aria-orientation="vertical">
+                    <button
+                      onClick={() => handleMenuAction(createNewChat)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      <Plus className="w-4 h-4" />
+                      New Chat
+                    </button>
+                    
+                    <button
+                      onClick={() => handleMenuAction(() => setShowChatSwitcher(true))}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      <ArrowLeftRight className="w-4 h-4" />
+                      Switch Chat
+                    </button>
+                    
+                    <button
+                      onClick={() => handleMenuAction(handleClearHistory)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      <Trash className="h-4 w-4" />
+                      Delete Chat
+                    </button>
+                    
+                    <button
+                      onClick={() => handleMenuAction(() => createPDF(messages))}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Export PDF
+                    </button>
+                    
+                    <button
+                      onClick={() => handleMenuAction(toggleWhiteboard)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      <Paintbrush className="h-4 w-4" />
+                      Canvas
+                    </button>
+                    
+                    <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+                      <ThemeToggle />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
             
-            <div className="p-4 border-t border-gray-700">
-              <button
-                onClick={createNewChat}
-                className="w-full py-2 bg-[#48AAFF] hover:bg-[#3a88cc] text-white rounded-lg transition-colors"
-              >
-                New Chat
-              </button>
-            </div>
+            {/* Always keep at least one quick action visible */}
+            <button
+              onClick={createNewChat}
+              className="flex items-center justify-center rounded-lg p-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors"
+              aria-label="New Chat"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
           </div>
         </div>
+      </nav>
+
+      {/* Optional - visual indicator for nav accessibility when hidden */}
+      <div 
+        className={`md:block hidden fixed top-0 left-0 right-0 h-2 z-20 bg-gradient-to-b from-gray-500/20 to-transparent transition-opacity duration-300 ${
+          showNav ? 'opacity-0' : 'opacity-100'
+        }`}
+      />
+
+      {/* Click outside to close mobile menu */}
+      {showMobileMenu && (
+        <div 
+          className="fixed inset-0 z-20 bg-transparent"
+          onClick={() => setShowMobileMenu(false)}
+          aria-hidden="true"
+        />
       )}
 
-      {/* Rest of your existing components */}
-      {/* ...existing code... */}
+
       
-      {/* Update your action buttons panel to include a "New Chat" button */}
+      
       {showActionButtons && (
         <div
           className="fixed bottom-16 right-1 z-20 p-3 backdrop-blur-md rounded-lg shadow-lg border border-[#f7eee332] max-w-[90vw] sm:max-w-xs bg-[#151515] dark:bg-[#1a1a1a] transition-all duration-300"
@@ -1246,20 +1374,20 @@ export default function Page() {
 
       {/* ...existing code... */}
       {/* Audio element for TTS playback */}
-      <div className="fixed bottom-1 right-1 z-10">
+      <div className="fixed bottom-1 right-1 z-10 sm:hidden">
         <button
-          onClick={toggleActionButtons}
-          className={`flex items-center justify-center gap-2 rounded-full ${showActionButtons ? 'bg-[#48AAFF]' : 'bg-[#151515]'} p-3 text-white hover:bg-[#48AAFF] transition-all duration-300 shadow-lg`}
+          onClick={() => createPDF(messages)}
+          className="flex items-center justify-center rounded-full bg-[#151515] dark:bg-[#323232] p-3 text-white hover:bg-[#48AAFF] transition-all duration-300 shadow-lg"
+          aria-label="Export to PDF"
         >
-          {/* <Sparkle className={showActionButtons ? 'text-white' : ''} /> */}
-          <Sparkles className={showActionButtons ? 'text-white' : ''} />
+          <FileText className="w-4 h-4" />
         </button>
       </div>
 
       <audio ref={audioRef} src={audioSrc || undefined} className="hidden" />
 
       {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-screen px-4">
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] px-4">
           <h1 className="text-[2.5em] sm:text-[3.5em] dark:text-[#f7eee3ca] text-[#1a1a1a] mb-4 font-['Instrument_Serif'] text-center leading-tight">What do you want to learn?</h1>
 
 
@@ -1390,7 +1518,7 @@ export default function Page() {
               {input.length > 0 && !isVoiceMode && (
                 <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
-                  <span>{input.length}/2000</span>
+                  <span>{input.length}/3000</span>
                 </div>
               )}
               {error && <div className="mt-2 text-center text-base text-red-500">{error}</div>}
@@ -1398,7 +1526,7 @@ export default function Page() {
           </div>
         </div>
       ) : (
-        <div className={`relative mx-auto flex h-full w-full flex-col ${showWhiteboard ? "md:w-full" : "md:w-2/3 w-full"}`}>
+        <div className={`relative mx-auto flex h-[calc(100vh-56px)] w-full flex-col ${showWhiteboard ? "md:w-full" : "md:w-2/3 w-full"}`}>
           <div className="flex-1 space-y-4 overflow-y-auto px-2 sm:px-3 py-4 pb-24 md:space-y-6 md:px-0 md:py-6">
             {messages.map((m, index) => {
               const previousUserMessage =
@@ -1650,7 +1778,7 @@ export default function Page() {
               {input.length > 0 && !isVoiceMode && (
                 <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
-                  <span>{input.length}/2000</span>
+                  <span>{input.length}/3000</span>
                 </div>
               )}
 
@@ -1663,7 +1791,7 @@ export default function Page() {
       {showWhiteboard && (
         <div
           ref={whiteboardRef}
-          className="fixed right-0 top-0 z-20 h-[100svh] w-full border-l border-[#f7eee332] md:w-1/3 dark:bg-[#1a1a1a] bg-[#f0f0f0]"
+          className="fixed right-0 top-[56px] z-20 h-[calc(100vh-56px)] w-full border-l border-[#f7eee332] md:w-1/3 dark:bg-[#1a1a1a] bg-[#f0f0f0]"
           style={{ touchAction: "none" }}
         >
           <Tldraw

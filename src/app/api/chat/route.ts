@@ -231,9 +231,9 @@ Analyze the following query: "${query}" and return the appropriate tag.
                - if the user requests you to generate a question, create only a thought-provoking and contextually appropriate question without providing any answers.
           `,
           prompt: finalPrompt,
-          providerOptions: {
-            google: { responseModalities: ['TEXT', 'IMAGE'] },
-          },
+          // providerOptions: {
+          //   google: { responseModalities: ['TEXT', 'IMAGE'] },
+          // },
         
         });
 
