@@ -47,6 +47,8 @@ FileText,
   Volume2,
   VolumeX,
   ChevronDown,
+  Edit3, // Add Edit icon
+  Save, // Add Save icon
 } from "lucide-react";
 
 // import { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu";
@@ -65,6 +67,7 @@ import { createPDF } from "../utils/createPDF"; // <-- Added import for PDF conv
 // Add this import near the top with other imports
 // import { useTheme } from "next-themes";
 import { ThemeToggle } from "../components/theme-toggle";
+import TiptapEditor from "../components/TiptapEditor";
 
 // Add new ChatInfo interface
 interface ChatInfo {
@@ -406,9 +409,45 @@ export default function Page() {
     onError: (error) => {
       console.error("Error:", error);
       setIsLoading(false);
-      setError("An error occurred. Please try again.");
+      
+      // Check for connection-related errors
+      if (
+        error.message?.includes("Failed to connect") || 
+        error.message?.includes("getaddrinfo ENOTFOUND") ||
+        error.message?.includes("network") ||
+        error.message?.includes("Network Error") ||
+        error.message?.includes("Cannot connect") ||
+        error.message?.includes("Failed after") ||
+        (error.cause && typeof error.cause === 'object' && 'message' in error.cause && 
+          typeof (error.cause as {message: string}).message === 'string' && 
+          (error.cause as {message: string}).message.includes("fetch failed")) ||
+        !navigator.onLine
+      ) {
+        setError("Internet connection lost. Please check your network and try again.");
+      } else {
+        setError("An error occurred. Please try again.");
+      }
     },
   });
+
+  // Add a network status monitor
+  useEffect(() => {
+    const handleOnline = () => {
+      setError(null);
+    };
+  
+    const handleOffline = () => {
+      setError("Internet connection lost. Please check your network and try again.");
+    };
+  
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+  
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Now we can use useEffect hooks that reference 'messages'
   useEffect(() => {
@@ -871,7 +910,7 @@ export default function Page() {
     try {
       await navigator.clipboard.writeText(content);
       setCopiedMessageId(id);
-      setTimeout(() => setCopiedMessageId(null), 3000);
+      setTimeout(() => setCopiedMessageId(null), 10000);
     } catch (err) {
       console.error("Failed to copy text: ", err);
     }
@@ -1154,6 +1193,77 @@ export default function Page() {
     setShowMobileMenu(false);
   };
 
+  // Add state for design mode
+  const [isDesignMode, setIsDesignMode] = useState(false);
+  const [editedMessages, setEditedMessages] = useState<{ [key: string]: string }>({});
+  
+  // Add function to toggle design mode
+  const toggleDesignMode = () => {
+    setIsDesignMode(prev => !prev);
+    // Reset edited messages when exiting design mode without saving
+    if (isDesignMode) {
+      setEditedMessages({});
+    }
+  };
+
+  // Add function to handle updates to edited messages
+  const handleMessageEdit = (messageId: string, content: string) => {
+    setEditedMessages(prev => ({
+      ...prev,
+      [messageId]: content
+    }));
+  };
+
+  // Add function to save edited messages
+  const saveEditedMessages = () => {
+    // Create a new messages array with edited content
+    const updatedMessages = messages.map(message => {
+      if (editedMessages[message.id]) {
+        // Convert HTML back to markdown-like format for storage
+        // This is a simplified conversion - a full implementation would need a more robust HTML-to-Markdown converter
+        let content = editedMessages[message.id];
+        
+        // Remove common HTML tags to convert back to plain text or markdown
+        content = content
+          .replace(/<h1>(.*?)<\/h1>/g, '# $1')
+          .replace(/<h2>(.*?)<\/h2>/g, '## $1')
+          .replace(/<h3>(.*?)<\/h3>/g, '### $1')
+          .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+          .replace(/<em>(.*?)<\/em>/g, '*$1*')
+          .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
+          .replace(/<ul>([\s\S]*?)<\/ul>/g, '$1')
+          .replace(/<ol>([\s\S]*?)<\/ol>/g, '$1')
+          .replace(/<li>(.*?)<\/li>/g, '* $1\n')
+          .replace(/<p>(.*?)<\/p>/g, '$1\n')
+          .replace(/<br\s*\/?>/g, '\n')
+          .replace(/<pre><code class="language-(.*?)">([\s\S]*?)<\/code><\/pre>/g, 
+                   (_, lang, code) => `\`\`\`${lang}\n${code}\n\`\`\``)
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+          
+        return { ...message, content };
+      }
+      return message;
+    });
+    
+    // If we have a chat ID, save to localStorage
+    if (chatId) {
+      localStorage.setItem(`chat_${chatId}`, JSON.stringify(updatedMessages));
+      
+      // Update chat metadata
+      updateChatMetadata(chatId, updatedMessages);
+    }
+    
+    // Exit design mode and reset edited messages
+    setIsDesignMode(false);
+    setEditedMessages({});
+    
+    // Force a page reload to reflect the changes
+    window.location.reload();
+  };
+
   return (
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300 text-base`}>
       {/* Optimized Top Navigation Bar with Mobile Dropdown */}
@@ -1213,6 +1323,28 @@ export default function Page() {
               <Paintbrush className="h-4 w-4" />
               <span>Canvas</span>
             </button>
+            
+            <button
+              onClick={toggleDesignMode}
+              className={`flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm ${
+                isDesignMode ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''
+              }`}
+              aria-label="Design Mode"
+            >
+              <Edit3 className="h-4 w-4" />
+              <span>{isDesignMode ? 'Exit Design' : 'Design'}</span>
+            </button>
+            
+            {isDesignMode && (
+              <button
+                onClick={saveEditedMessages}
+                className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 bg-green-600 text-white hover:bg-green-700 transition-colors text-sm"
+                aria-label="Save Edits"
+              >
+                <Save className="h-4 w-4" />
+                <span>Save</span>
+              </button>
+            )}
             
             <div className="flex items-center">
               <ThemeToggle />
@@ -1284,6 +1416,30 @@ export default function Page() {
                       <Paintbrush className="h-4 w-4" />
                       Canvas
                     </button>
+                    
+                    <button
+                      onClick={() => handleMenuAction(toggleDesignMode)}
+                      className={`w-full text-left px-4 py-2 text-sm ${
+                        isDesignMode 
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' 
+                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232]'
+                      } flex items-center gap-2`}
+                      role="menuitem"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                      {isDesignMode ? 'Exit Design Mode' : 'Design Mode'}
+                    </button>
+                    
+                    {isDesignMode && (
+                      <button
+                        onClick={() => handleMenuAction(saveEditedMessages)}
+                        className="w-full text-left px-4 py-2 text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 flex items-center gap-2"
+                        role="menuitem"
+                      >
+                        <Save className="h-4 w-4" />
+                        Save Changes
+                      </button>
+                    )}
                     
                     <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
                       <ThemeToggle />
@@ -1518,10 +1674,39 @@ export default function Page() {
               {input.length > 0 && !isVoiceMode && (
                 <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
-                  <span>{input.length}/3000</span>
+                  <span>{input.length}/10000</span>
                 </div>
               )}
-              {error && <div className="mt-2 text-center text-base text-red-500">{error}</div>}
+              {error && (
+                <div className={`mt-2 text-center p-3 rounded-lg ${
+                  error.includes("Internet connection") 
+                    ? "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800" 
+                    : ""
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    {error.includes("Internet connection") && (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                      </svg>
+                    )}
+                    <span className={`text-base ${error.includes("Internet connection") ? "text-red-600 dark:text-red-400 font-medium" : "text-red-500"}`}>
+                      {error}
+                    </span>
+                  </div>
+                  
+                  {error.includes("Internet connection") && (
+                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                      <button 
+                        onClick={() => window.location.reload()} 
+                        className="underline hover:text-red-700 dark:hover:text-red-300"
+                      >
+                        Reload page
+                      </button> when your connection is restored.
+                    </div>
+                  )}
+                </div>
+              )}
             </form>
           </div>
         </div>
@@ -1541,71 +1726,88 @@ export default function Page() {
                   className="animate-slide-in group relative mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="max-w-[95vw] sm:max-w-[85vw] text-[1.4em] sm:text-[1.6em] tracking-tight font-['Instrument_Serif'] rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2.2em] p-3">
-                    <MarkdownRenderer content={m.content} />
-                  </div>
+                  {isDesignMode ? (
+                    <div className="max-w-[95vw] sm:max-w-[85vw] overflow-hidden md:max-w-xl">
+                      <TiptapEditor 
+                        content={m.content}
+                        onUpdate={(html) => handleMessageEdit(m.id, html)}
+                        placeholder="Edit your message..."
+                      />
+                    </div>
+                  ) : (
+                    <div className="max-w-[95vw] sm:max-w-[85vw] text-[1.4em] sm:text-[1.6em] tracking-tight rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2.2em] p-3">
+                      <MarkdownRenderer content={m.content} />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div key={m.id} className="animate-slide-in group relative flex flex-col md:mx-0">
-                  <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[1.1rem] sm:text-[1.2rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.4rem]">
-                    <div className="animate-fade-in transition-opacity duration-500">
-                      <MarkdownRenderer content={m.content} />
-
-                      {/* Model attribution */}
-                      <div className="mt-4 text-sm md:text-base dark:text-[#f7eee380] text-[#555555] italic">
-                        Generated by {getModelDisplayName(selectedModel)}
-                      </div>
+                  {isDesignMode ? (
+                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden md:max-w-2xl">
+                      <TiptapEditor 
+                        content={m.content}
+                        onUpdate={(html) => handleMessageEdit(m.id, html)}
+                        placeholder="Edit assistant's response..."
+                      />
                     </div>
-                    <div className="mb-14 flex flex-wrap gap-1 sm:gap-2">
-                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
-                        <button onClick={handleSearchWeb} className="text-base md:text-lg">
-                          <Globe className="h-5 w-5" />
-                        </button>
+                  ) : (
+                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[1.1rem] sm:text-[1.2rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.4rem]">
+                      <div className="animate-fade-in transition-opacity duration-500">
+                        <MarkdownRenderer content={m.content} />
                       </div>
-                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
-                        <button onClick={() => handleSearchYouTube(lastQuery)} className="text-base md:text-lg">
-                          <Play className="h-5 w-5" />
-                        </button>
-                      </div>
-                      {previousUserMessage && (
+                      
+                      {/* Leave action buttons visible in normal mode */}
+                      <div className="mb-14 flex flex-wrap gap-1 sm:gap-2">
                         <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
-                          <button
-                            onClick={() => regenerateQuery(previousUserMessage, m.id)}
-                            className="text-base md:text-lg"
-                            // disabled={regenForMessageId === m.id || isLoading}
-                          >
-                            {regenForMessageId === m.id ? " " : <RotateCw className="h-5 w-5" />}
+                          <button onClick={handleSearchWeb} className="text-base md:text-lg">
+                            <Globe className="h-5 w-5" />
                           </button>
                         </div>
-                      )}
-                      <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
-                        <button onClick={() => copyMessage(m.content, m.id)} className="text-base md:text-lg">
-                          {copiedMessageId === m.id ? (
-                            <Check className="h-5 w-5 text-[#48AAFF]" />
-                          ) : (
-                            <Copy className="h-5 w-5 dark:text-[#f7eee3] text-[#0c0c0c] hover:text-[#48AAFF]" />
-                          )}
-                        </button>
-                      </div>
-
-                      {/* TTS playback button for assistant messages */}
-                      {isVoiceMode && (
-                        <div className="flex items-center justify-center rounded-full p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
-                          <button
-                            onClick={() => playResponseAudio(m.content)}
-                            className="text-base md:text-lg"
-                            disabled={isPlaying}
-                          >
-                            {isPlaying ? (
-                              <VolumeX className="h-5 w-5 text-[#48AAFF] animate-pulse" />
+                        <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
+                          <button onClick={() => handleSearchYouTube(lastQuery)} className="text-base md:text-lg">
+                            <Play className="h-5 w-5" />
+                          </button>
+                        </div>
+                        {previousUserMessage && (
+                          <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
+                            <button
+                              onClick={() => regenerateQuery(previousUserMessage, m.id)}
+                              className="text-base md:text-lg"
+                              // disabled={regenForMessageId === m.id || isLoading}
+                            >
+                              {regenForMessageId === m.id ? " " : <RotateCw className="h-5 w-5" />}
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
+                          <button onClick={() => copyMessage(m.content, m.id)} className="text-base md:text-lg">
+                            {copiedMessageId === m.id ? (
+                              <Check className="h-5 w-5 text-[#48AAFF]" />
                             ) : (
-                              <Volume2 className="h-5 w-5" />
+                              <Copy className="h-5 w-5 dark:text-[#f7eee3] text-[#0c0c0c] hover:text-[#48AAFF]" />
                             )}
                           </button>
                         </div>
-                      )}
+
+                        {/* TTS playback button for assistant messages */}
+                        {isVoiceMode && (
+                          <div className="flex items-center justify-center rounded-full p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
+                            <button
+                              onClick={() => playResponseAudio(m.content)}
+                              className="text-base md:text-lg"
+                              disabled={isPlaying}
+                            >
+                              {isPlaying ? (
+                                <VolumeX className="h-5 w-5 text-[#48AAFF] animate-pulse" />
+                              ) : (
+                                <Volume2 className="h-5 w-5" />
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
@@ -1666,7 +1868,7 @@ export default function Page() {
                         adjustTextareaHeight();
                       }}
                       onKeyDown={handleKeyDown}
-                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-['Instrument_Serif'] px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060]"
+                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] font-['Instrument_Serif']"
                       rows={1}
                     />
                   ) : (
@@ -1778,11 +1980,40 @@ export default function Page() {
               {input.length > 0 && !isVoiceMode && (
                 <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
-                  <span>{input.length}/3000</span>
+                  <span>{input.length}/10000</span>
                 </div>
               )}
 
-              {error && <div className="mt-2 text-center text-base text-red-500">{error}</div>}
+              {error && (
+                <div className={`mt-2 text-center p-3 rounded-lg ${
+                  error.includes("Internet connection") 
+                    ? "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800" 
+                    : ""
+                }`}>
+                  <div className="flex items-center justify-center gap-2">
+                    {error.includes("Internet connection") && (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                      </svg>
+                    )}
+                    <span className={`text-base ${error.includes("Internet connection") ? "text-red-600 dark:text-red-400 font-medium" : "text-red-500"}`}>
+                      {error}
+                    </span>
+                  </div>
+                  
+                  {error.includes("Internet connection") && (
+                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                      <button 
+                        onClick={() => window.location.reload()} 
+                        className="underline hover:text-red-700 dark:hover:text-red-300"
+                      >
+                        Reload page
+                      </button> when your connection is restored.
+                    </div>
+                  )}
+                </div>
+              )}
             </form>
           </div>
         </div>
@@ -1809,6 +2040,88 @@ export default function Page() {
           >
             Close
           </button>
+        </div>
+      )}
+
+      {/* Add Chat Switcher Modal */}
+      {showChatSwitcher && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-lg bg-white dark:bg-[#1a1a1a] p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold dark:text-white text-black">Switch Chat</h2>
+              <button 
+                onClick={() => setShowChatSwitcher(false)}
+                className="rounded-full p-1 dark:text-gray-400 text-gray-500 hover:dark:bg-gray-800 hover:bg-gray-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* <div className="mb-4">
+              <input 
+                type="text" 
+                placeholder="Search chats..." 
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#252525] p-2 text-black dark:text-white"
+              />
+            </div> */}
+            
+            <div className="max-h-[60vh] overflow-y-auto">
+              {savedChats.length > 0 ? (
+                <div className="space-y-2">
+                  {savedChats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => {
+                        switchToChat(chat.id);
+                        setShowChatSwitcher(false);
+                      }}
+                      className={`w-full text-left rounded-md p-3 transition-colors ${
+                        chatId === chat.id 
+                          ? 'bg-blue-100 dark:bg-blue-900/30' 
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      <div className="font-medium text-black dark:text-white truncate">
+                        {chat.title}
+                      </div>
+                      {chat.firstMessage && (
+                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {chat.firstMessage}
+                        </div>
+                      )}
+                      <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        {new Date(chat.updatedAt).toLocaleDateString()} • {chat.messageCount} message{chat.messageCount !== 1 ? 's' : ''}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No chats found
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 flex justify-between">
+              <button
+                onClick={() => {
+                  createNewChat();
+                  setShowChatSwitcher(false);
+                }}
+                className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+              >
+                <Plus className="h-4 w-4" />
+                New Chat
+              </button>
+              
+              <button
+                onClick={() => setShowChatSwitcher(false)}
+                className="rounded-md border border-gray-300 dark:border-gray-700 px-4 py-2 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>
