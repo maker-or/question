@@ -31,9 +31,7 @@ import {
   ArrowUp,
   Info,
   RotateCw,
-  Code,
-  List,
-  Italic,
+
   
   // MessageCircleX,
   // FileText,

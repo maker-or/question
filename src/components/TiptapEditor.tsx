@@ -8,7 +8,6 @@ import CodeBlock from '@tiptap/extension-code-block';
 import {
 
   Code,
-  List,
   Italic,
   Bold, // Add Save icon
 } from "lucide-react";
@@ -33,6 +32,8 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
 }) => {
   const [showToolbar, setShowToolbar] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  console.log(isFocused)
+  console.log(messageId)
 
   // Convert markdown to HTML for initial content
   const initialContent = content
