@@ -1,16 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import CodeBlock from '@tiptap/extension-code-block';
+import {
+
+  Code,
+  List,
+  Italic,
+  Bold, // Add Save icon
+} from "lucide-react";
+
 
 interface TiptapEditorProps {
   content: string;
   onUpdate: (html: string) => void;
   placeholder?: string;
   editable?: boolean;
+  className?: string;
+  messageId?: string;
 }
 
 const TiptapEditor: React.FC<TiptapEditorProps> = ({
@@ -18,7 +28,12 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   onUpdate,
   placeholder = 'Start typing...',
   editable = true,
+  className = 'bg-red-700',
+  messageId,
 }) => {
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
   // Convert markdown to HTML for initial content
   const initialContent = content
     // Convert code blocks
@@ -34,10 +49,12 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     // Convert links
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
     // Convert lists
-    .replace(/^\s*\*\s(.*$)/gm, '<li>$1</li>').replace(/<li>.*<\/li>/g, '<ul>$&</ul>')
-    .replace(/^\s*\d+\.\s(.*$)/gm, '<li>$1</li>').replace(/<li>.*<\/li>/g, '<ol>$&</ol>')
-    // Convert paragraphs (handle this last to avoid interfering with other elements)
-    .replace(/^(?!<[oh][l12]>|<pre>|<h[1-6]>)(.*$)/gm, '<p>$1</p>');
+    .replace(/^\s*\*\s(.*$)/gm, '<li>$1</li>')
+    .replace(/<li>.*<\/li>/g, '<ul>$&</ul>')
+    .replace(/^\s*\d+\.\s(.*$)/gm, '<li>$1</li>')
+    .replace(/<li>.*<\/li>/g, '<ol>$&</ol>')
+    // Convert paragraphs (skip empty/whitespace-only lines)
+    .replace(/^(?!<[oh][l12]>|<pre>|<h[1-6]>)(?!\s*$)(.*\S.*)$/gm, '<p>$1</p>');
 
   const editor = useEditor({
     extensions: [
@@ -55,6 +72,18 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
       const html = editor.getHTML();
       onUpdate(html);
     },
+    onFocus: () => {
+      setShowToolbar(true);
+      setIsFocused(true);
+    },
+    onBlur: () => {
+      setTimeout(() => {
+        if (!document.activeElement?.closest('.editor-toolbar')) {
+          setShowToolbar(false);
+          setIsFocused(false);
+        }
+      }, 100);
+    },
   });
 
   useEffect(() => {
@@ -64,46 +93,48 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   }, [editable, editor]);
 
   return (
-    <div className="tiptap-editor rounded-xl overflow-hidden border dark:border-gray-700 border-gray-200">
-      <EditorContent editor={editor} className="prose dark:prose-invert max-w-none p-3" />
+    <div className={`relative rounded-xl overflow-hidden  ${className}`}>
+      <EditorContent editor={editor} className="p-4 " />
       
-      {editable && (
-        <div className="flex items-center gap-2 p-2 border-t dark:border-gray-700 border-gray-200 bg-gray-50 dark:bg-gray-900">
+      {editable && showToolbar && (
+        <div 
+          className="editor-toolbar fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 bg-white dark:bg-[#1F1F1F]   rounded-2xl shadow-3xl"
+        >
           <button 
             onClick={() => editor?.chain().focus().toggleBold().run()}
-            className={`p-2 rounded ${editor?.isActive('bold') ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
+            className={`p-2 h-10 w-10 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${editor?.isActive('bold') ? 'bg-gray-200 dark:bg-gray-700 font-bold' : ''}`}
             title="Bold"
           >
-            <strong>B</strong>
+            <Bold />
           </button>
           <button 
             onClick={() => editor?.chain().focus().toggleItalic().run()}
-            className={`p-2 rounded ${editor?.isActive('italic') ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
+            className={`p-2 h-10 w-10 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${editor?.isActive('italic') ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
             title="Italic"
           >
-            <em>I</em>
+            <Italic />
           </button>
           <button 
             onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-            className={`p-2 rounded ${editor?.isActive('codeBlock') ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
+            className={`p-2 h-10 w-10 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${editor?.isActive('codeBlock') ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
             title="Code Block"
           >
-            <code>{`</>`}</code>
+            <Code />
           </button>
-          <button 
+          {/* <button 
             onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={`p-2 rounded ${editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
+            className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
             title="Heading"
           >
             H2
           </button>
           <button 
             onClick={() => editor?.chain().focus().toggleBulletList().run()}
-            className={`p-2 rounded ${editor?.isActive('bulletList') ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
+            className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${editor?.isActive('bulletList') ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
             title="Bullet List"
           >
             • List
-          </button>
+          </button> */}
         </div>
       )}
     </div>

@@ -91,6 +91,11 @@ module.exports = {
       animation: {
         'slide-in': 'slide-in 0.3s ease-out',
         'fade-in': 'fade-in 0.3s ease-out',
+        'spin-slow': 'spin 3s linear infinite',
+        'pulse-node': 'pulseNode 2s ease-in-out infinite',
+        'pulse-agent': 'pulseAgent 1.5s ease-in-out infinite',
+        'dash-flow': 'dashFlow 3s linear infinite',
+        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
       },
       keyframes: {
         'slide-in': {
@@ -100,6 +105,18 @@ module.exports = {
         'fade-in': {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        pulseNode: {
+          '0%, 100%': { opacity: 0.3, transform: 'scale(0.8)' },
+          '50%': { opacity: 1, transform: 'scale(1.2)' },
+        },
+        pulseAgent: {
+          '0%, 100%': { transform: 'scale(0.9)', boxShadow: '0 0 0 0 rgba(72, 170, 255, 0.7)' },
+          '50%': { transform: 'scale(1)', boxShadow: '0 0 0 10px rgba(72, 170, 255, 0)' },
+        },
+        dashFlow: {
+          '0%': { strokeDashoffset: '100' },
+          '100%': { strokeDashoffset: '-100' },
         },
       },
     },

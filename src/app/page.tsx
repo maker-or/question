@@ -31,6 +31,10 @@ import {
   ArrowUp,
   Info,
   RotateCw,
+  Code,
+  List,
+  Italic,
+  
   // MessageCircleX,
   // FileText,
   // Sparkle,
@@ -232,7 +236,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
             return <td className="border border-gray-700 px-4 py-2 text-base md:text-lg">{children}</td>;
           },
           blockquote({ children }) {
-            return <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-lg md:text-xl">{children}</blockquote>;
+            return <blockquote className="border-l-4 pl-4 italic my-4 text-lg md:text-xl">{children}</blockquote>;
           },
           h1({ children }) {
             return <h1 className="text-3xl font-bold mt-6 mb-4">{children}</h1>;
@@ -285,7 +289,7 @@ interface VisionText {
 const MODEL_OPTIONS = [
   { id: "google/gemini-2.0-flash-lite-preview-02-05:free", name: "Gemini flash 2.0" },
   { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
-  { id: "deepseek/deepseek-chat:free", name: "DeepSeek v3" },
+  { id: "deepseek/deepseek-chat-v3-0324:free", name: "DeepSeek v3 0324" },
    { id: "google/gemma-3-27b-it:free", name: "Gemma 3" },
   //  { id: "qwen/qwq-32b:free", name: "Qwen 32B" }
   { id: "mistralai/mistral-small-3.1-24b-instruct:free", name: "Mistral 3.1 24b" },
@@ -1199,13 +1203,15 @@ export default function Page() {
   
   // Add function to toggle design mode
   const toggleDesignMode = () => {
-    setIsDesignMode(prev => !prev);
-    // Reset edited messages when exiting design mode without saving
-    if (isDesignMode) {
-      setEditedMessages({});
-    }
+    setIsDesignMode(prev => {
+      // When exiting design mode, reset edited messages state
+      if (prev) {
+        setEditedMessages({});
+      }
+      return !prev;
+    });
   };
-
+  
   // Add function to handle updates to edited messages
   const handleMessageEdit = (messageId: string, content: string) => {
     setEditedMessages(prev => ({
@@ -1213,7 +1219,7 @@ export default function Page() {
       [messageId]: content
     }));
   };
-
+  
   // Add function to save edited messages
   const saveEditedMessages = () => {
     // Create a new messages array with edited content
@@ -1268,11 +1274,11 @@ export default function Page() {
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300 text-base`}>
       {/* Optimized Top Navigation Bar with Mobile Dropdown */}
       <nav 
-        className={`sticky top-0 z-30 w-full bg-[#f8f8f8] dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-[#f7eee332] backdrop-blur-md shadow-md transition-all duration-300 transform ${
+        className={`sticky top-0 z-30 w-full bg-[#f8f8f8] dark:bg-[#0c0c0c] border-b border-gray-200 dark:border-[#f7eee332] backdrop-blur-md shadow-md transition-all duration-300 transform ${
           showNav || isMobile ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between h-14">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between h-14 ">
           <div className="flex items-center space-x-1">
             <span className="text-black dark:text-white text-lg font-semibold">SphereAI</span>
           </div>
@@ -1617,7 +1623,40 @@ export default function Page() {
                           className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
                           // disabled={isLoading || isWebSearchLoading}
                         >
-                          {isLoading || isWebSearchLoading ? <Square className="h-5 w-5" fill="#f7eee3" /> : <ArrowUp className="h-4 w-4" />}
+                          {isLoading || isWebSearchLoading ? (
+                            <div className="relative h-5 w-5 flex items-center justify-center">
+                              {/* Agentic workflow animation */}
+                              <svg width="20" height="20" viewBox="0 0 50 50" className="animate-spin-slow">
+                                {/* Base circular path */}
+                                <circle cx="25" cy="25" r="20" stroke="#f7eee3" strokeWidth="1" fill="none" opacity="0.3" />
+                                
+                                {/* Nodes representing processing steps */}
+                                <circle cx="25" cy="5" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "0ms"}} />
+                                <circle cx="41" cy="15" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "300ms"}} />
+                                <circle cx="41" cy="35" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "600ms"}} />
+                                <circle cx="25" cy="45" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "900ms"}} />
+                                <circle cx="9" cy="35" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "1200ms"}} />
+                                <circle cx="9" cy="15" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "1500ms"}} />
+                                
+                                {/* Flowing path/connection */}
+                                <path 
+                                  d="M25,5 L41,15 L41,35 L25,45 L9,35 L9,15 Z" 
+                                  stroke="#f7eee3" 
+                                  strokeWidth="1.5" 
+                                  fill="none" 
+                                  strokeDasharray="100"
+                                  strokeDashoffset="100"
+                                  className="animate-dash-flow"
+                                />
+                                
+                                {/* Center node - representing the agent */}
+                                <circle cx="25" cy="25" r="4" fill="#48AAFF" className="animate-pulse-agent" />
+                              </svg>
+                              
+                              {/* Small dot in center for focus */}
+                              <div className="absolute w-1 h-1 bg-white rounded-full animate-ping-slow"></div>
+                            </div>
+                          ) : <ArrowUp className="h-4 w-4" />}
                         </button>
                       </div>
 
@@ -1712,7 +1751,8 @@ export default function Page() {
         </div>
       ) : (
         <div className={`relative mx-auto flex h-[calc(100vh-56px)] w-full flex-col ${showWhiteboard ? "md:w-full" : "md:w-2/3 w-full"}`}>
-          <div className="flex-1 space-y-4 overflow-y-auto px-2 sm:px-3 py-4 pb-24 md:space-y-6 md:px-0 md:py-6">
+         
+          <div className="flex-1 space-y-4 overflow-y-auto px-3 sm:px-3 py-4 pb-24 md:space-y-6 md:px-0 md:py-6">
             {messages.map((m, index) => {
               const previousUserMessage =
                 m.role === "assistant" &&
@@ -1723,40 +1763,47 @@ export default function Page() {
               return m.role === "user" ? (
                 <div
                   key={m.id}
-                  className="animate-slide-in group relative mx-2 flex flex-col md:mx-0"
+                  className="animate-slide-in group relative p-2 mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   {isDesignMode ? (
-                    <div className="max-w-[95vw] sm:max-w-[85vw] overflow-hidden md:max-w-xl">
+                    <div className="max-w-[100vw] sm:max-w-[85vw] overflow-hidden md:max-w-xl rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c]">
                       <TiptapEditor 
-                        content={m.content}
+                        content={editedMessages[m.id] || m.content}
                         onUpdate={(html) => handleMessageEdit(m.id, html)}
-                        placeholder="Edit your message..."
+                        placeholder="Edit message..."
+                        className="min-h-[60px] bg-[#FF5E00]"
+                        messageId={m.id}
+                        
                       />
                     </div>
-                  ) : (
-                    <div className="max-w-[95vw] sm:max-w-[85vw] text-[1.4em] sm:text-[1.6em] tracking-tight rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2.2em] p-3">
-                      <MarkdownRenderer content={m.content} />
+                  ) : ( //edit lo  user qurey
+                    <div className="max-w-[95vw]  sm:max-w-[85vw] text-[1.4em] sm:text-[1.6em] tracking-tight rounded-t-3xl rounded-br-3xl dark:bg-[#FF5E00] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2.2em] p-3">
+                      <MarkdownRenderer content={m.content} /> 
                     </div>
                   )}
                 </div>
               ) : (
                 <div key={m.id} className="animate-slide-in group relative flex flex-col md:mx-0">
                   {isDesignMode ? (
-                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden md:max-w-2xl">
+                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-hidden md:max-w-2xl rounded-xl">
                       <TiptapEditor 
-                        content={m.content}
+                        content={editedMessages[m.id] || m.content}
                         onUpdate={(html) => handleMessageEdit(m.id, html)}
-                        placeholder="Edit assistant's response..."
+                        placeholder="Edit response..."
+                        className="min-h-[60px]"
+                        messageId={m.id}
                       />
                     </div>
                   ) : (
-                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[1.1rem] sm:text-[1.2rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.4rem]">
+                    // Regular message display (non-design mode)
+                    // the actual area in whivh the response is displayed
+                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[1.1rem] sm:text-[1.2rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.4rem]"> 
                       <div className="animate-fade-in transition-opacity duration-500">
                         <MarkdownRenderer content={m.content} />
                       </div>
                       
-                      {/* Leave action buttons visible in normal mode */}
+                      {/* Message action buttons... */}
                       <div className="mb-14 flex flex-wrap gap-1 sm:gap-2">
                         <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                           <button onClick={handleSearchWeb} className="text-base md:text-lg">
@@ -1848,173 +1895,301 @@ export default function Page() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Bottom input or toolbar area */}
           <div
-            className={`flex sticky bottom-0 z-10 flex-row gap-3 items-center justify-center ${showWhiteboard ? "right-[33.333%]" : "right-0"
-              } left-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)/80] to-transparent p-2 sm:p-4 transition-all duration-300`}
+            className={`flex sticky bottom-0 z-10 flex-row gap-3 items-center justify-center ${
+              showWhiteboard ? "right-[33.333%]" : "right-0"
+            } left-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)/80] to-transparent p-2 sm:p-4 transition-all duration-300`}
           >
-            <form
-              onSubmit={onSubmit}
-              className={`mx-auto w-full ${showWhiteboard ? "max-w-full px-2 sm:px-4" : "max-w-2xl px-2 sm:px-3 md:px-0"}`}
-            >
-              <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl dark:bg-[#ffffff] bg-[#f0f0f0] p-1  shadow-md transition-all duration-300">
-                <div className="flex relative flex-1  items-center overflow-hidden dark:bg-[#bebdbdde] bg-[#ffffff] rounded-xl py-3 sm:py-5 transition-all duration-300">
-                  {!isVoiceMode ? (
-                    <textarea
-                      ref={textareaRef}
-                      placeholder="Ask me anything..."
-                      value={input}
-                      onChange={(e) => {
-                        handleInputChange(e);
-                        adjustTextareaHeight();
-                      }}
-                      onKeyDown={handleKeyDown}
-                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] font-['Instrument_Serif']"
-                      rows={1}
-                    />
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center px-4">
-                      <div className={`flex flex-col items-center ${isRecording ? 'animate-pulse' : ''}`}>
-                        <div className="text-center mb-2">
-                          {isRecording ? (
-                            <span className="text-red-500 text-base">Recording...</span>
-                          ) : (
-                            <span className="dark:text-[#f7eee380] text-[#444444] text-base">Ready to record</span>
+            {isDesignMode ? (
+              // floating Toolbar for design mode
+              <div className={`mx-auto w-auto ${showWhiteboard ? "max-w-full px-2 sm:px-4" : "max-w-2xl px-2 sm:px-3 md:px-0"}`}>
+                
+                {/* <div className="group w-full items-center  rounded-2xl dark:bg-[#1a1a1a] bg-[#f0f0f0] p-2 shadow-md transition-all duration-300">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => {
+                          // Bold formatting action – implement formatting on the editor for the selected message.
+                          // ...existing formatting code...
+                        }}
+                        className="h-10 w-10 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 dark:text-white text-black hover:bg-gray-300 dark:hover:bg-gray-700" 
+                        title="Bold"
+                      >
+                        <strong>B</strong>
+                      </button>
+                      <button 
+                        onClick={() => {
+                        
+                        }}
+                        className="h-10 w-10 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 dark:text-white text-black hover:bg-gray-300 dark:hover:bg-gray-700" 
+                        title="Italic"
+                      >
+                       <Italic />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const editorRef = useRef<any>(null);
+                          // Function to insert code block markup
+                          const insertCodeBlock = () => {
+                            const currentMessageId = Object.keys(editedMessages)[0]; // Assuming one message is being edited
+                            if (!currentMessageId) return;
+
+                            // Get the current content
+                            let content = editedMessages[currentMessageId] || '';
+                            
+                            // Insert code block markup at the cursor position or end of content
+                            const codeBlockMarkup = '<pre><code class="language-js">// Your code here\n</code></pre>';
+                            
+                            // For simplicty, we'll append to the end if we can't access the editor directly
+                            setEditedMessages({
+                              ...editedMessages,
+                              [currentMessageId]: content + codeBlockMarkup
+                            });
+                            
+                            // If we have a ref to the editor (e.g., from Tiptap), we could insert at cursor
+                            if (editorRef.current) {
+                              // This would depend on the editor implementation
+                              // editorRef.current.commands.insertContent(codeBlockMarkup);
+                            }
+                          }
+                          // Code block action
+                          // ...existing formatting code...
+                        }}
+                        className="h-10 w-10 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 dark:text-white text-black hover:bg-gray-300 dark:hover:bg-gray-700" 
+                        title="Code Block"
+                      >
+                        <code>{<Code />}</code>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          // Heading action (e.g., level 2)
+                          // ...existing formatting code...
+                        }}
+                        className="h-10 w-10 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 dark:text-white text-black hover:bg-gray-300 dark:hover:bg-gray-700" 
+                        title="Heading"
+                      >
+                        H2
+                      </button>
+                      <button 
+                        onClick={() => {
+                          // Bullet list action
+                          // ...existing formatting code...
+                         
+                        }}
+                        className="h-10 w-10 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 dark:text-white text-black hover:bg-gray-300 dark:hover:bg-gray-700" 
+                        title="Bullet List"
+                      >
+                        <List />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm dark:text-gray-300 text-gray-600">
+                      
+                      </span>
+                    </div>
+                  </div>
+                </div> */}
+              </div>
+            ) : (
+              // ...existing input field form...
+              <form
+                onSubmit={onSubmit}
+                className={`mx-auto w-full ${showWhiteboard ? "max-w-full px-2 sm:px-4" : "max-w-2xl px-2 sm:px-3 md:px-0"}`}
+              >
+                <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl dark:bg-[#ffffff] bg-[#f0f0f0] p-1  shadow-md transition-all duration-300">
+                  <div className="flex relative flex-1  items-center overflow-hidden dark:bg-[#bebdbdde] bg-[#ffffff] rounded-xl py-3 sm:py-5 transition-all duration-300">
+                    {!isVoiceMode ? (
+                      <textarea
+                        ref={textareaRef}
+                        placeholder="Ask me anything..."
+                        value={input}
+                        onChange={(e) => {
+                          handleInputChange(e);
+                          adjustTextareaHeight();
+                        }}
+                        onKeyDown={handleKeyDown}
+                        className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] font-['Instrument_Serif']"
+                        rows={1}
+                      />
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center px-4">
+                        <div className={`flex flex-col items-center ${isRecording ? 'animate-pulse' : ''}`}>
+                          <div className="text-center mb-2">
+                            {isRecording ? (
+                              <span className="text-red-500 text-base">Recording...</span>
+                            ) : (
+                              <span className="dark:text-[#f7eee380] text-[#444444] text-base">Ready to record</span>
+                            )}
+                          </div>
+                          {transcribedText && (
+                            <div className="max-w-full overflow-x-auto dark:text-[#f7eee3] text-[#0c0c0c] text-base py-2">
+                              {transcribedText}
+                            </div>
                           )}
                         </div>
-                        {transcribedText && (
-                          <div className="max-w-full overflow-x-auto dark:text-[#f7eee3] text-[#0c0c0c] text-base py-2">
-                            {transcribedText}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  )}
-                  <div className="absolute right-3 bottom-3 flex gap-3 items-center justify-center">
-                    {/* Voice mode toggle button */}
-                    {/* <button 
-                      type="button"
-                      onClick={toggleVoiceMode} 
-                      className={`p-2 rounded-full ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee380]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
-                    >
-                      {isVoiceMode ? <Mic /> : <MicOff />}
-                    </button>  */}
+                    )}
+                    <div className="absolute right-3 bottom-3 flex gap-3 items-center justify-center">
+                      {/* Voice mode toggle button */}
+                      {/* <button 
+                        type="button"
+                        onClick={toggleVoiceMode} 
+                        className={`p-2 rounded-full ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee380]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
+                      >
+                        {isVoiceMode ? <Mic /> : <MicOff />}
+                      </button>  */}
 
-                    {/* Voice recording button (only when in voice mode) */}
-                    {/* {isVoiceMode && (
+                      {/* Voice recording button (only when in voice mode) */}
+                      {/* {isVoiceMode && (
+                        <button
+                          type="button"
+                          onClick={isRecording ? stopRecording : startRecording}
+                          className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-[#252525] hover:bg-[#323232]'} text-[#f7eee3] transition-colors duration-200`}
+                        >
+                          {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                        </button>
+                      )} */}
+
+                      {/* Canvas button */}
+
+
+                      {/* Submit button */}
+                      {!isVoiceMode && (
+
+                        <div className="flex items-center justify-center p-1 bg-[#E0E0E0] rounded-full box-shadow: 76px 2px 58px -95px rgba(224,224,224,1) inset;">
+                          <button
+                            type="submit"
+                            className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
+                            // disabled={isLoading || isWebSearchLoading}
+                          >
+                            {isLoading || isWebSearchLoading ? (
+                              <div className="relative h-5 w-5 flex items-center justify-center">
+                                {/* Agentic workflow animation */}
+                                <svg width="20" height="20" viewBox="0 0 50 50" className="animate-spin-slow">
+                                  {/* Base circular path */}
+                                  <circle cx="25" cy="25" r="20" stroke="#f7eee3" strokeWidth="1" fill="none" opacity="0.3" />
+                                  
+                                  {/* Nodes representing processing steps */}
+                                  <circle cx="25" cy="5" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "0ms"}} />
+                                  <circle cx="41" cy="15" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "300ms"}} />
+                                  <circle cx="41" cy="35" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "600ms"}} />
+                                  <circle cx="25" cy="45" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "900ms"}} />
+                                  <circle cx="9" cy="35" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "1200ms"}} />
+                                  <circle cx="9" cy="15" r="3" fill="#f7eee3" className="animate-pulse-node" style={{animationDelay: "1500ms"}} />
+                                  
+                                  {/* Flowing path/connection */}
+                                  <path 
+                                    d="M25,5 L41,15 L41,35 L25,45 L9,35 L9,15 Z" 
+                                    stroke="#f7eee3" 
+                                    strokeWidth="1.5" 
+                                    fill="none" 
+                                    strokeDasharray="100"
+                                    strokeDashoffset="100"
+                                    className="animate-dash-flow"
+                                  />
+                                  
+                                  {/* Center node - representing the agent */}
+                                  <circle cx="25" cy="25" r="4" fill="#48AAFF" className="animate-pulse-agent" />
+                                </svg>
+                                
+                                {/* Small dot in center for focus */}
+                                <div className="absolute w-1 h-1 bg-white rounded-full animate-ping-slow"></div>
+                              </div>
+                            ) : <ArrowUp className="h-4 w-4" />}
+                          </button>
+                        </div>
+
+                      )}
+                    </div>
+
+                  </div>
+                  <div className="flex gap-1 items-center flex-wrap">
+
+
+                    <div className="relative m-1">
                       <button
                         type="button"
-                        onClick={isRecording ? stopRecording : startRecording}
-                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500' : 'bg-[#252525] hover:bg-[#323232]'} text-[#f7eee3] transition-colors duration-200`}
-                      >
-                        {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                        onClick={() => setShowModelSelector(!showModelSelector)}
+                        className="flex items-center justify-between gap-2 px-3 py-1.5 text-base sm:px-4 sm:py-2 sm:text-lg rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
+                        <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
+                        <ChevronDown className="h-5 w-5" />
                       </button>
-                    )} */}
 
-                    {/* Canvas button */}
-
-
-                    {/* Submit button */}
-                    {!isVoiceMode && (
-
-                      <div className="flex items-center justify-center p-1 bg-[#E0E0E0] rounded-full box-shadow: 76px 2px 58px -95px rgba(224,224,224,1) inset;">
-                        <button
-                          type="submit"
-                          className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
-                          // disabled={isLoading || isWebSearchLoading}
-                        >
-                          {isLoading || isWebSearchLoading ? <Square className="h-6 w-6" fill="#f7eee3" /> : <ArrowUp className="h-5 w-5" />}
-                        </button>
-                      </div>
-
-                    )}
-                  </div>
-
-                </div>
-                <div className="flex gap-1 items-center flex-wrap">
-
-
-                  <div className="relative m-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowModelSelector(!showModelSelector)}
-                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-base sm:px-4 sm:py-2 sm:text-lg rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
-                      <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
-                      <ChevronDown className="h-5 w-5" />
+                      {showModelSelector && (
+                        <div className="absolute bottom-full mb-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838] w-full">
+                          <ul className="py-1">
+                            {MODEL_OPTIONS.map((model) => (
+                              <li key={model.id}>
+                                <button
+                                  type="button"
+                                  className={`w-full text-left px-4 py-2 dark:hover:bg-[#252525] hover:bg-[#f0f0f0] ${selectedModel === model.id ? 'dark:bg-[#323232] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c]' : 'dark:text-[#f7eee380] text-[#444444]'}`}
+                                  onClick={() => handleModelChange(model.id)}
+                                >
+                                  {model.name}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
+                      <Paintbrush className="h-5 w-5" />
                     </button>
 
-                    {showModelSelector && (
-                      <div className="absolute bottom-full mb-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838] w-full">
-                        <ul className="py-1">
-                          {MODEL_OPTIONS.map((model) => (
-                            <li key={model.id}>
-                              <button
-                                type="button"
-                                className={`w-full text-left px-4 py-2 dark:hover:bg-[#252525] hover:bg-[#f0f0f0] ${selectedModel === model.id ? 'dark:bg-[#323232] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c]' : 'dark:text-[#f7eee380] text-[#444444]'}`}
-                                onClick={() => handleModelChange(model.id)}
-                              >
-                                {model.name}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
+
+
+                    {/* <button
+                      type="button"
+                      onClick={toggleVoiceMode}
+                      className={`flex m-1 p-2 rounded-lg ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee3]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
+                    >
+                      {isVoiceMode ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </button> */}
+                  </div>
+
+                </div>
+
+                {input.length > 0 && !isVoiceMode && (
+                  <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
+                    <span>Press Enter to send, Shift + Enter for new line</span>
+                    <span>{input.length}/10000</span>
+                  </div>
+                )}
+
+                {error && (
+                  <div className={`mt-2 text-center p-3 rounded-lg ${
+                    error.includes("Internet connection") 
+                      ? "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800" 
+                      : ""
+                  }`}>
+                    <div className="flex items-center justify-center gap-2">
+                      {error.includes("Internet connection") && (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                          <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                        </svg>
+                      )}
+                      <span className={`text-base ${error.includes("Internet connection") ? "text-red-600 dark:text-red-400 font-medium" : "text-red-500"}`}>
+                        {error}
+                      </span>
+                    </div>
+                    
+                    {error.includes("Internet connection") && (
+                      <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                        <button 
+                          onClick={() => window.location.reload()} 
+                          className="underline hover:text-red-700 dark:hover:text-red-300"
+                        >
+                          Reload page
+                        </button> when your connection is restored.
                       </div>
                     )}
                   </div>
-                  <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
-                    <Paintbrush className="h-5 w-5" />
-                  </button>
-
-
-
-                  {/* <button
-                    type="button"
-                    onClick={toggleVoiceMode}
-                    className={`flex m-1 p-2 rounded-lg ${isVoiceMode ? 'bg-[#48AAFF] text-white' : 'bg-[#2a2a2a] text-[#f7eee3]'} hover:bg-[#48AAFF] hover:text-white transition-colors duration-200`}
-                  >
-                    {isVoiceMode ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </button> */}
-                </div>
-
-              </div>
-
-              {input.length > 0 && !isVoiceMode && (
-                <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
-                  <span>Press Enter to send, Shift + Enter for new line</span>
-                  <span>{input.length}/10000</span>
-                </div>
-              )}
-
-              {error && (
-                <div className={`mt-2 text-center p-3 rounded-lg ${
-                  error.includes("Internet connection") 
-                    ? "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800" 
-                    : ""
-                }`}>
-                  <div className="flex items-center justify-center gap-2">
-                    {error.includes("Internet connection") && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                      </svg>
-                    )}
-                    <span className={`text-base ${error.includes("Internet connection") ? "text-red-600 dark:text-red-400 font-medium" : "text-red-500"}`}>
-                      {error}
-                    </span>
-                  </div>
-                  
-                  {error.includes("Internet connection") && (
-                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                      <button 
-                        onClick={() => window.location.reload()} 
-                        className="underline hover:text-red-700 dark:hover:text-red-300"
-                      >
-                        Reload page
-                      </button> when your connection is restored.
-                    </div>
-                  )}
-                </div>
-              )}
-            </form>
+                )}
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -2108,18 +2283,12 @@ export default function Page() {
                   createNewChat();
                   setShowChatSwitcher(false);
                 }}
-                className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+                className="flex items-center justify-center  w-full gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
               >
                 <Plus className="h-4 w-4" />
                 New Chat
               </button>
               
-              <button
-                onClick={() => setShowChatSwitcher(false)}
-                className="rounded-md border border-gray-300 dark:border-gray-700 px-4 py-2 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                Cancel
-              </button>
             </div>
           </div>
         </div>
@@ -2127,6 +2296,5 @@ export default function Page() {
     </main>
   );
 }
-
 
 
