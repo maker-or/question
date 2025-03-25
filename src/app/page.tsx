@@ -285,15 +285,109 @@ interface VisionText {
 
 // Model options
 const MODEL_OPTIONS = [
-  { id: "google/gemini-2.0-flash-lite-preview-02-05:free", name: "Gemini flash 2.0" },
-  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
-  { id: "deepseek/deepseek-chat-v3-0324:free", name: "DeepSeek v3 0324" },
-   { id: "google/gemma-3-27b-it:free", name: "Gemma 3" },
-  //  { id: "qwen/qwq-32b:free", name: "Qwen 32B" }
-  { id: "mistralai/mistral-small-3.1-24b-instruct:free", name: "Mistral 3.1 24b" },
-  { id: "microsoft/phi-3-medium-128k-instruct:free", name: "Phi-3" },
-
-
+  { 
+    id: "google/gemini-2.0-flash-lite-preview-02-05:free", 
+    name: "Gemini 2.0 Flash Lite", 
+    // status: "Pinned", 
+    icon: (
+      <svg height="1em" style={{ flex: "none", lineHeight: 1 }} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gemini-gradient" x1="0%" x2="68.73%" y1="100%" y2="30.395%">
+            <stop offset="0%" stopColor="#0066CC"></stop>
+            <stop offset="52.021%" stopColor="#0066CC"></stop>
+            <stop offset="100%" stopColor="#3399FF"></stop>
+          </linearGradient>
+        </defs>
+        <path d="M12 24A14.304 14.304 0 000 12 14.304 14.304 0 0012 0a14.305 14.305 0 0012 12 14.305 14.305 0 00-12 12" fill="url(#gemini-gradient)" fillRule="nonzero"></path>
+      </svg>
+    )
+  },
+  { 
+    id: "meta-llama/llama-3.3-70b-instruct:free", 
+    name: "Llama 3.3 70B", 
+    // status: "Degraded", 
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="0.67em" viewBox="0 0 256 171" preserveAspectRatio="xMidYMid">
+        <defs>
+          <linearGradient id="llama-gradient-a" x1="13.878%" x2="89.144%" y1="55.934%" y2="58.694%">
+            <stop offset="0%" stopColor="#003366"/>
+            <stop offset="40%" stopColor="#003366"/>
+            <stop offset="83%" stopColor="#0066CC"/>
+            <stop offset="100%" stopColor="#0066CC"/>
+          </linearGradient>
+          <linearGradient id="llama-gradient-b" x1="54.315%" x2="54.315%" y1="82.782%" y2="39.307%">
+            <stop offset="0%" stopColor="#0066CC"/>
+            <stop offset="100%" stopColor="#003366"/>
+          </linearGradient>
+        </defs>
+        <path fill="#0066CC" d="M27.651 112.136c0 9.775 2.146 17.28 4.95 21.82 3.677 5.947 9.16 8.466 14.751 8.466 7.211 0 13.808-1.79 26.52-19.372 10.185-14.092 22.186-33.874 30.26-46.275l13.675-21.01c9.499-14.591 20.493-30.811 33.1-41.806C161.196 4.985 172.298 0 183.47 0c18.758 0 36.625 10.87 50.3 31.257C248.735 53.584 256 81.707 256 110.729c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363v-27.616c15.695 0 19.612-14.422 19.612-30.927 0-23.52-5.484-49.623-17.564-68.273-8.574-13.23-19.684-21.313-31.907-21.313-13.22 0-23.859 9.97-35.815 27.75-6.356 9.445-12.882 20.956-20.208 33.944l-8.066 14.289c-16.203 28.728-20.307 35.271-28.408 46.07-14.2 18.91-26.324 26.076-42.287 26.076-18.935 0-30.91-8.2-38.325-20.556C2.973 139.413 0 126.202 0 111.148l27.651.988Z"/>
+        <path fill="url(#llama-gradient-a)" d="M21.802 33.206C34.48 13.666 52.774 0 73.757 0 85.91 0 97.99 3.597 110.605 13.897c13.798 11.261 28.505 29.805 46.853 60.368l6.58 10.967c15.881 26.459 24.917 40.07 30.205 46.49 6.802 8.243 11.565 10.7 17.752 10.7 15.695 0 19.612-14.422 19.612-30.927l24.393-.766c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363-11.395 0-21.49-2.475-32.654-13.007-8.582-8.083-18.615-22.443-26.334-35.352l-22.96-38.352C118.528 64.08 107.96 49.73 101.845 43.23c-6.578-6.988-15.036-15.428-28.532-15.428-10.923 0-20.2 7.666-27.963 19.39L21.802 33.206Z"/>
+        <path fill="url(#llama-gradient-b)" d="M73.312 27.802c-10.923 0-20.2 7.666-27.963 19.39-10.976 16.568-17.698 41.245-17.698 64.944 0 9.775 2.146 17.28 4.95 21.82L9.027 149.482C2.973 139.413 0 126.202 0 111.148 0 83.772 7.514 55.24 21.802 33.206 34.48 13.666 52.774 0 73.757 0l-.445 27.802Z"/>
+      </svg>
+    )
+  },
+  { 
+    id: "deepseek/deepseek-chat-v3-0324:free", 
+    name: "DeepSeek v3", 
+    // status: "Others", 
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" style={{ flex: "none", lineHeight: 1 }} viewBox="0 0 24 24" width="1em" height="1em">
+        <path fill="#0066CC" d="M23.748 4.482c-.254-.124-.364.113-.512.234-.051.039-.094.09-.137.136-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.156-.708-.311-.955-.65-.172-.241-.219-.51-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.093.172.187.129.323-.082.28-.18.552-.266.833-.055.179-.137.217-.329.14a5.526 5.526 0 0 1-1.736-1.18c-.857-.828-1.631-1.742-2.597-2.458a11.365 11.365 0 0 0-.689-.471c-.985-.957.13-1.743.388-1.836.27-.098.093-.432-.779-.428-.872.004-1.67.295-2.687.684a3.055 3.055 0 0 1-.465.137 9.597 9.597 0 0 0-2.883-.102c-1.885.21-3.39 1.102-4.497 2.623C.082 8.606-.231 10.684.152 12.85c.403 2.284 1.569 4.175 3.36 5.653 1.858 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.133-.284 4.994-1.86.47.234.962.327 1.78.397.63.059 1.236-.03 1.705-.128.735-.156.684-.837.419-.961-2.155-1.004-1.682-.595-2.113-.926 1.096-1.296 2.746-2.642 3.392-7.003.05-.347.007-.565 0-.845-.004-.17.035-.237.23-.256a4.173 4.173 0 0 0 1.545-.475c1.396-.763 1.96-2.015 2.093-3.517.02-.23-.004-.467-.247-.588zM11.581 18c-2.089-1.642-3.102-2.183-3.52-2.16-.392.024-.321.471-.235.763.09.288.207.486.371.739.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.167-1.361-.802-2.5-1.86-3.301-3.307-.774-1.393-1.224-2.887-1.298-4.482-.02-.386.093-.522.477-.592a4.696 4.696 0 0 1 1.529-.039c2.132.312 3.946 1.265 5.468 2.774.868.86 1.525 1.887 2.202 2.891.72 1.066 1.494 2.082 2.48 2.914.348.292.625.514.891.677-.802.09-2.14.11-3.054-.614zm1-6.44a.306.306 0 0 1 .415-.287.302.302 0 0 1 .2.288.306.306 0 0 1-.31.307.303.303 0 0 1-.304-.308zm3.11 1.596c-.2.081-.399.151-.59.16a1.245 1.245 0 0 1-.798-.254c-.274-.23-.47-.358-.552-.758a1.73 1.73 0 0 1 .016-.588c.07-.327-.008-.537-.239-.727-.187-.156-.426-.199-.688-.199a.559.559 0 0 1-.254-.078.253.253 0 0 1-.114-.358c.028-.054.16-.186.192-.21.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.391.451.462.576.685.914.176.265.336.537.445.848.067.195-.019.354-.25.452z"/>
+      </svg>
+    ),
+    new: true 
+  },
+  { 
+    id: "google/gemma-3-27b-it:free", 
+    name: "Gemma 3", 
+    status: "Others", 
+    icon: (
+      <svg width="1em" height="1em" viewBox="0 0 256 262" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+        <path d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027" fill="#0066CC"/>
+        <path d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1" fill="#0066CC"/>
+        <path d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782" fill="#3399FF"/>
+        <path d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251" fill="#EB4335"/>
+      </svg>
+    )
+  },
+  { 
+    id: "mistralai/mistral-small-3.1-24b-instruct:free", 
+    name: "Mistral 3.1 24B", 
+    // status: "Others", 
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" viewBox="0 0 256 233" width="1em" height="0.91em">
+        <path d="M186.18182 0h46.54545v46.54545h-46.54545z"/>
+        <path fill="#F7D046" d="M209.45454 0h46.54545v46.54545h-46.54545z"/>
+        <path d="M0 0h46.54545v46.54545H0zM0 46.54545h46.54545V93.0909H0zM0 93.09091h46.54545v46.54545H0zM0 139.63636h46.54545v46.54545H0zM0 186.18182h46.54545v46.54545H0z"/>
+        <path fill="#F7D046" d="M23.27273 0h46.54545v46.54545H23.27273z"/>
+        <path fill="#F2A73B" d="M209.45454 46.54545h46.54545V93.0909h-46.54545zM23.27273 46.54545h46.54545V93.0909H23.27273z"/>
+        <path d="M139.63636 46.54545h46.54545V93.0909h-46.54545z"/>
+        <path fill="#F2A73B" d="M162.90909 46.54545h46.54545V93.0909h-46.54545zM69.81818 46.54545h46.54545V93.0909H69.81818z"/>
+        <path fill="#EE792F" d="M116.36364 93.09091h46.54545v46.54545h-46.54545zM162.90909 93.09091h46.54545v46.54545h-46.54545zM69.81818 93.09091h46.54545v46.54545H69.81818z"/>
+        <path d="M93.09091 139.63636h46.54545v46.54545H93.09091z"/>
+        <path fill="#EB5829" d="M116.36364 139.63636h46.54545v46.54545h-46.54545z"/>
+        <path fill="#EE792F" d="M209.45454 93.09091h46.54545v46.54545h-46.54545zM23.27273 93.09091h46.54545v46.54545H23.27273z"/>
+        <path d="M186.18182 139.63636h46.54545v46.54545h-46.54545z"/>
+        <path fill="#EB5829" d="M209.45454 139.63636h46.54545v46.54545h-46.54545z"/>
+        <path d="M186.18182 186.18182h46.54545v46.54545h-46.54545z"/>
+        <path fill="#EB5829" d="M23.27273 139.63636h46.54545v46.54545H23.27273z"/>
+        <path fill="#EA3326" d="M209.45454 186.18182h46.54545v46.54545h-46.54545zM23.27273 186.18182h46.54545v46.54545H23.27273z"/>
+      </svg>
+    )
+  },
+  { 
+    id: "microsoft/phi-3-medium-128k-instruct:free", 
+    name: "Phi-3", 
+    // status: "Others", 
+    icon: (
+      <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" preserveAspectRatio="xMidYMid">
+        <path fill="#F1511B" d="M121.666 121.666H0V0h121.666z"/>
+        <path fill="#80CC28" d="M256 121.666H134.335V0H256z"/>
+        <path fill="#00ADEF" d="M121.663 256.002H0V134.336h121.663z"/>
+        <path fill="#FBBC09" d="M256 256.002H134.335V134.336H256z"/>
+      </svg>
+    )
+  },
 ];
 
 // Add isMobile detection hook
@@ -1268,6 +1362,60 @@ export default function Page() {
     window.location.reload();
   };
 
+  // Update the model selector UI with proper scrolling
+  const ModelSelector = () => (
+    <div className="absolute bottom-full mb-2 z-10 w-96 rounded-lg bg-[#1a1a1a] shadow-lg  border-2 border-[#7B7A7A] p-4">
+      <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+        <div className="grid grid-cols-1 gap-2">
+          {MODEL_OPTIONS.map((model) => (
+            <button
+              key={model.id}
+              onClick={() => handleModelChange(model.id)}
+              className={`p-3 rounded-lg transition-all duration-200 ${
+                selectedModel === model.id
+                  ? "bg-[#683D24] border border-[#C9520D]"
+                  : "bg-[#252525] hover:bg-[#323232] border border-transparent"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-lg ${
+                      selectedModel === model.id
+                        ? "bg-[#C9520D]  text-white"
+                        : "bg-gray-700 text-gray-300"
+                    }`}
+                  >
+                    {model.icon}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-100 text-left">
+                      {model.name}
+                      {model.new && (
+                        <span className="ml-2 text-xs text-yellow-400 bg-yellow-400/20 px-1 rounded">
+                          NEW
+                        </span>
+                      )}
+                    </p>
+                    {model.status && (
+                      <p className="text-xs text-gray-400">
+                        {model.status === "Degraded" ? (
+                          <span className="text-yellow-400">Degraded AI</span>
+                        ) : (
+                          model.status
+                        )}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300 text-base`}>
       {/* Optimized Top Navigation Bar with Mobile Dropdown */}
@@ -1456,7 +1604,7 @@ export default function Page() {
             {/* Always keep at least one quick action visible */}
             <button
               onClick={createNewChat}
-              className="flex items-center justify-center rounded-lg p-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors"
+              className="flex items-center justify-center rounded-full bg-[#151515] dark:bg-[#323232] p-3 text-white hover:bg-[#48AAFF] transition-all duration-300 shadow-lg"
               aria-label="New Chat"
             >
               <Plus className="w-4 h-4" />
@@ -1673,24 +1821,7 @@ export default function Page() {
                       <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
-
-                    {showModelSelector && (
-                      <div className="absolute bottom-full mb-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838] w-full">
-                        <ul className="py-1">
-                          {MODEL_OPTIONS.map((model) => (
-                            <li key={model.id}>
-                              <button
-                                type="button"
-                                className={`w-full text-left px-4 py-2 dark:hover:bg-[#252525] hover:bg-[#f0f0f0] ${selectedModel === model.id ? 'dark:bg-[#323232] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c]' : 'dark:text-[#f7eee380] text-[#444444]'}`}
-                                onClick={() => handleModelChange(model.id)}
-                              >
-                                {model.name}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    {showModelSelector && <ModelSelector />}
                   </div>
                   <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
                     <Paintbrush className="h-4 w-4" />
@@ -1723,7 +1854,7 @@ export default function Page() {
                   <div className="flex items-center justify-center gap-2">
                     {error.includes("Internet connection") && (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a 1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
                         <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
                       </svg>
                     )}
@@ -2109,28 +2240,16 @@ export default function Page() {
                       <button
                         type="button"
                         onClick={() => setShowModelSelector(!showModelSelector)}
-                        className="flex items-center justify-between gap-2 px-3 py-1.5 text-base sm:px-4 sm:py-2 sm:text-lg rounded-lg dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0]">
-                        <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
-                        <ChevronDown className="h-5 w-5" />
-                      </button>
-
-                      {showModelSelector && (
-                        <div className="absolute bottom-full mb-1 z-10 rounded-md dark:bg-[#1a1a1a] bg-[#ffffff] shadow-lg border border-[#383838] w-full">
-                          <ul className="py-1">
-                            {MODEL_OPTIONS.map((model) => (
-                              <li key={model.id}>
-                                <button
-                                  type="button"
-                                  className={`w-full text-left px-4 py-2 dark:hover:bg-[#252525] hover:bg-[#f0f0f0] ${selectedModel === model.id ? 'dark:bg-[#323232] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c]' : 'dark:text-[#f7eee380] text-[#444444]'}`}
-                                  onClick={() => handleModelChange(model.id)}
-                                >
-                                  {model.name}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
+                        className="flex items-center justify-between gap-2 px-3 py-1.5 text-base sm:px-4 sm:py-2 sm:text-lg rounded-lg  dark:bg-[#252525] bg-[#e2e2e2] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors dark:hover:bg-[#323232] hover:bg-[#d0d0d0] border border-transparent hover:border-gray-300 dark:hover:border-gray-700">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">
+                            {MODEL_OPTIONS.find(m => m.id === selectedModel)?.icon || "✨"}
+                          </span>
+                          <span className="max-w-[100px] sm:max-w-none truncate">{getModelDisplayName(selectedModel)}</span>
                         </div>
-                      )}
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                      {showModelSelector && <ModelSelector />}
                     </div>
                     <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
                       <Paintbrush className="h-5 w-5" />
@@ -2165,7 +2284,7 @@ export default function Page() {
                     <div className="flex items-center justify-center gap-2">
                       {error.includes("Internet connection") && (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                          <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a 1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
                           <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
                         </svg>
                       )}
