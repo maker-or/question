@@ -1,63 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from "openai";
-import fs from "fs";
-import path from 'path';
-import { tmpdir } from 'os';
 
-export async function POST(req: NextRequest): Promise<Response> {
+
+export const config = {
+  runtime: 'edge',
+};
+
+export async function POST(request: NextRequest) {
   try {
-    // Check for OpenAI API key instead of Groq
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ error: 'OPENAI_API_KEY is not set' }, { status: 500 });
-    }
-    console.log("in the transcribe route");
-    // Get audio file from request
-    const formData = await req.formData();
+    const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
     
-    // const fileStream = audioFile.stream();
     if (!audioFile) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
     }
-
-    // Convert File to buffer and save to temporary file
-    const arrayBuffer = await audioFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     
-    // Create a temporary file path
-    const tempFilePath = path.join(tmpdir(), `recording-${Date.now()}.wav`);
+    // Get necessary API keys from environment variables
+    const GROQ_API_KEY = process.env.GROQ_API_KEY;
     
-    // Write buffer to temporary file
-    fs.writeFileSync(tempFilePath, buffer);
-    
-    // Create read stream from the temporary file
-    const fileStream = fs.createReadStream(tempFilePath);
-
-    // Call Whisper API through OpenAI directly (not Groq)
-
-    const openai = new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
-      baseURL: "https://api.groq.com/openai/v1"
-    });
-    
-    const response = await openai.audio.transcriptions.create({
-      model: 'whisper-large-v3',
-      file: fileStream
-    });
-    console.log("file is proccesed")
-    // Clean up the temporary file
-    try {
-      fs.unlinkSync(tempFilePath);
-    } catch (cleanupError) {
-      console.error('Error cleaning up temporary file:', cleanupError);
+    if (!GROQ_API_KEY) {
+      console.error('Missing GROQ_API_KEY');
+      return NextResponse.json({ error: 'Configuration error' }, { status: 500 });
     }
+    
+    // The model parameter might be passed from the client
+    const model =  'distil-whisper-large-v3-en';
+    
+    // Create a new FormData object to send to Groq
+    const groqFormData = new FormData();
+    groqFormData.append('file', audioFile);
+    groqFormData.append('model', model);
+    groqFormData.append('response_format', 'json');
+    
+    // Call Groq's API with proper multipart/form-data format
+    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        // No Content-Type header needed as it's automatically set with the boundary
+      },
+      body: groqFormData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Transcription error:', errorText);
+      return NextResponse.json({ error: `Failed to transcribe audio: ${errorText}` }, { status: response.status });
+    }
+    
+    const data = await response.json();
+    console.log("////////////////////////////////")
+    console.log('Transcription response:', data);
+    console.log("////////////////////////////////")
 
-    return NextResponse.json({ text: response.text });
+    
+    return NextResponse.json({ 
+      text: data.text,
+      language: data.language || 'en'
+    });
   } catch (error) {
     console.error('Error transcribing audio:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error occurred' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to process audio' }, { status: 500 });
   }
 }
