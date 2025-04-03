@@ -75,6 +75,10 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onSubmit, onExit, lastResponse })
     };
   }, [isRecording]);
 
+  useEffect(() => {
+    alert('Voice mode is still experimental and may make mistakes.');
+  }, []);
+
   // Function to speak the response
   const speakResponse = async (text: string) => {
     if (!text || isSpeaking) return;
