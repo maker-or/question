@@ -16,7 +16,7 @@ export function ThemeToggle() {
   if (!mounted) {
     // Render placeholder to avoid layout shift
     return (
-      <button className="flex items-center justify-center p-2 rounded-lg bg-[#252525] text-[#f7eee3] transition-colors duration-200">
+      <button className="flex items-center justify-center p-2 rounded-lg bg-transparent dark:bg-[#252525] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors duration-200">
         <div className="h-4 w-4" />
       </button>
     )
@@ -25,7 +25,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="flex items-center justify-start gap-2 rounded-lg p-2  hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200"
+      className="flex items-center justify-start gap-2 rounded-lg p-2 hover:bg-gray-200 dark:hover:bg-[#323232] dark:text-[#f7eee3] text-[#0c0c0c] transition-colors duration-200"
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
     >
       {theme === "dark" ? (

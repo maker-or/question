@@ -58,7 +58,7 @@ export async function POST(req: Request): Promise<Response> {
     }
     
     console.log("Request body received:", JSON.stringify(body).substring(0, 200) + "...");
-    const selectedModel = body.model || "google/gemini-2.0-pro-exp-02-05:free";
+    const selectedModel = body.model || "deepseek/deepseek-chat-v3-0324:free";
     const isVoiceMode = body.voiceMode || false;
     
     // Input validation
