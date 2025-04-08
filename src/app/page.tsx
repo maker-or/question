@@ -576,6 +576,9 @@ export default function Page() {
     id: chatId,
     initialMessages: initialMessages,
     onResponse: (response) => {
+      // Remove the code that tries to read the response stream directly
+      // This was causing the "ReadableStreamDefaultReader constructor" error
+      
       // Only reset input if NOT using the deepseek model to prevent refresh loop
       console.log(response);
       if (selectedModel !== "deepseek/deepseek-chat:free") {
@@ -600,8 +603,32 @@ export default function Page() {
       setIsLoading(false);
       setIsStreaming(false);
 
-      // Check for connection-related errors
+      // Check for credit limit errors in the error message
       if (
+        error.message?.includes("Rate limit exceeded") ||
+        error.message?.includes("credits") ||
+        error.message?.includes("429") ||
+        error.message?.includes("CREDIT_LIMIT_EXCEEDED") ||
+        (error.cause && 
+         typeof error.cause === 'object' && 
+         'message' in error.cause &&
+         typeof (error.cause as { message: string }).message === 'string' &&
+         ((error.cause as { message: string }).message.includes("Rate limit exceeded") ||
+          (error.cause as { message: string }).message.includes("credits")))
+      ) {
+        setShowCreditLimitError(true);
+        setError("You've reached your free usage limit for AI models today. Please try a different model or try again tomorrow.");
+      }
+      // Check for stream-related errors
+      else if (
+        error.message?.includes("ReadableStreamDefaultReader") ||
+        error.message?.includes("locked to a reader") ||
+        error.message?.includes("stream")
+      ) {
+        setError("A connection error occurred. Please try again.");
+      }
+      // Check for connection-related errors
+      else if (
         error.message?.includes("Failed to connect") ||
         error.message?.includes("getaddrinfo ENOTFOUND") ||
         error.message?.includes("network") ||
@@ -1169,6 +1196,9 @@ export default function Page() {
     }
   };
 
+  // Add credit limit error state
+  const [showCreditLimitError, setShowCreditLimitError] = useState(false);
+
   const handleSearchYouTube = (query: string) => {
     window.open(
       `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
@@ -1377,7 +1407,6 @@ export default function Page() {
             bgColor = "bg-green-400/20";
             textColor = "text-green-500";
           } else if (tag === "Experimental") {
-            bgColor = "bg-purple-400/20";
             textColor = "text-purple-500";
           } else if (tag === "Fast") {
             bgColor = "bg-yellow-400/20";
@@ -1442,6 +1471,38 @@ export default function Page() {
           ))}
         </div>
       </div>
+    </div>
+  );
+
+  // Create a reusable error display component function
+  const ErrorDisplay = ({ message, icon, actionText, onAction }: { 
+    message: string; 
+    icon?: React.ReactNode; 
+    actionText?: string;
+    onAction?: () => void;
+  }) => (
+    <div className="mt-2 text-center p-3 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+      <div className="flex items-center justify-center gap-2">
+        {icon || (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        )}
+        <span className="text-base text-red-600 dark:text-red-400 font-medium">
+          {message}
+        </span>
+      </div>
+
+      {actionText && onAction && (
+        <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+          <button
+            onClick={onAction}
+            className="underline hover:text-red-700 dark:hover:text-red-300"
+          >
+            {actionText}
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -1848,33 +1909,17 @@ export default function Page() {
                 </div>
               )}
               {error && (
-                <div className={`mt-2 text-center p-3 rounded-lg ${error.includes("Internet connection")
-                    ? "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800"
-                    : ""
-                  }`}>
-                  <div className="flex items-center justify-center gap-2">
-                    {error.includes("Internet connection") && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a 1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                      </svg>
-                    )}
-                    <span className={`text-base ${error.includes("Internet connection") ? "text-red-600 dark:text-red-400 font-medium" : "text-red-500"}`}>
-                      {error}
-                    </span>
-                  </div>
-
-                  {error.includes("Internet connection") && (
-                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="underline hover:text-red-700 dark:hover:text-red-300"
-                      >
-                        Reload page
-                      </button> when your connection is restored.
-                    </div>
-                  )}
-                </div>
+                <ErrorDisplay 
+                  message={error}
+                  icon={error.includes("Internet connection") ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a 1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                    </svg>
+                  ) : undefined}
+                  actionText={error.includes("Internet connection") ? "Reload page" : undefined}
+                  onAction={error.includes("Internet connection") ? () => window.location.reload() : undefined}
+                />
               )}
             </form>
           </div>
@@ -2177,33 +2222,17 @@ export default function Page() {
                 )}
 
                 {error && (
-                  <div className={`mt-2 text-center p-3 rounded-lg ${error.includes("Internet connection")
-                      ? "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800"
-                      : ""
-                    }`}>
-                    <div className="flex items-center justify-center gap-2">
-                      {error.includes("Internet connection") && (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a 1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                          <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                        </svg>
-                      )}
-                      <span className={`text-base ${error.includes("Internet connection") ? "text-red-600 dark:text-red-400 font-medium" : "text-red-500"}`}>
-                        {error}
-                      </span>
-                    </div>
-
-                    {error.includes("Internet connection") && (
-                      <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                        <button
-                          onClick={() => window.location.reload()}
-                          className="underline hover:text-red-700 dark:hover:text-red-300"
-                        >
-                          Reload page
-                        </button> when your connection is restored.
-                      </div>
-                    )}
-                  </div>
+                  <ErrorDisplay 
+                    message={error}
+                    icon={error.includes("Internet connection") ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a 1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                      </svg>
+                    ) : undefined}
+                    actionText={error.includes("Internet connection") ? "Reload page" : undefined}
+                    onAction={error.includes("Internet connection") ? () => window.location.reload() : undefined}
+                  />
                 )}
               </form>
             )}
@@ -2323,7 +2352,41 @@ export default function Page() {
         />
       )}
 
- 
+      {/* Add this right after the existing error notification */}
+      {showCreditLimitError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-lg bg-white dark:bg-[#1a1a1a] p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold dark:text-white text-black">Credit Limit Reached</h2>
+              <button
+                onClick={() => setShowCreditLimitError(false)}
+                className="rounded-full p-1 dark:text-gray-400 text-gray-500 hover:dark:bg-gray-800 hover:bg-gray-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mb-6 text-gray-800 dark:text-gray-200">
+              <p className="mb-3">You've reached your free usage limit for the selected AI model today.</p>
+              <p>Please try one of these options:</p>
+              <ul className="list-disc ml-5 mt-2 space-y-1">
+                <li>Switch to a different AI model</li>
+                <li>Try again tomorrow when your limits reset</li>
+              </ul>
+            </div>
+            <div className="flex justify-between">
+              <button
+                onClick={() => {
+                  setShowCreditLimitError(false);
+                  setShowModelSelector(true);
+                }}
+                className="flex items-center justify-center w-full gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+              >
+                Switch Model
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

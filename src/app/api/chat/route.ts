@@ -338,8 +338,45 @@ Analyze the following query: "${query}" and return the appropriate tag.
         } catch (streamError:  unknown) {
           console.error('Error during streamText:', streamError);
           
+          // Check for rate limit / credit errors
+          const isRateLimitError = 
+            // Check error cause with rate limit message
+            (streamError instanceof Error && 
+             streamError.cause && 
+             typeof streamError.cause === 'object' && 
+             'message' in streamError.cause && 
+             typeof (streamError.cause as { message: string }).message === 'string' &&
+             ((streamError.cause as { message: string }).message.includes('Rate limit exceeded') || 
+              (streamError.cause as { message: string }).message.includes('credits'))) ||
+            // Check error message directly  
+            (streamError instanceof Error && 
+             streamError.message && 
+             (streamError.message.includes('Rate limit exceeded') ||
+              streamError.message.includes('429')));
+
           // Provide a simple readable stream as fallback
-          if (
+          if (isRateLimitError) {
+            // Credit limit error - return special message
+            const creditLimitMessage = "You've reached your free usage limit for AI models today. Please try again tomorrow or switch to a different model.";
+            const stream = new ReadableStream({
+              start(controller) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                  error: "CREDIT_LIMIT_EXCEEDED",
+                  text: creditLimitMessage
+                })}\n\n`));
+                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                controller.close();
+              }
+            });
+            
+            return new Response(stream, {
+              headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+              }
+            });
+          } else if (
             (streamError instanceof Error && streamError.name === 'AbortError') || 
             (streamError instanceof Error && streamError.message?.includes('timeout'))
           ) {
