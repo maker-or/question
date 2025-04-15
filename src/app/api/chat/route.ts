@@ -1,5 +1,6 @@
 // import { createOpenAI } from '@ai-sdk/openai';
 //import Groq from "groq-sdk"; // Ensure this package is installed
+import { groq } from '@ai-sdk/groq';
 import { streamText, generateText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { Pinecone } from '@pinecone-database/pinecone';
@@ -132,7 +133,7 @@ export async function POST(req: Request): Promise<Response> {
       try {
         decision = await withTimeout(
           generateText({
-            model: openrouter('meta-llama/llama-3.3-70b-instruct:free'),
+            model: openrouter('meta-llama/llama-3.3-70b-instruct:free') || groq('qwen-qwq-32b'),
             prompt: decisionPrompt,
             temperature: 0,
           }),
@@ -176,7 +177,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
           try {
             subjectResult = await withTimeout(
               generateText({
-                model: openrouter('meta-llama/llama-3.3-70b-instruct:free'),
+                model: groq('meta-llama/llama-4-scout-17b-16e-instruct'),
                 prompt: sub,
                 temperature: 0,
               }),
@@ -286,7 +287,7 @@ Analyze the following query: "${query}" and return the appropriate tag.
         `;
       }
       
-      const model = openrouter(selectedModel);
+      const model = openrouter(selectedModel) || groq(selectedModel); 
       
       // Generate the response using OpenRouter
       try {

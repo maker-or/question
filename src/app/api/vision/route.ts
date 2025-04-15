@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     // });
 
     const openrouter = createOpenRouter({
-      apiKey: process.env.OPENROUTE_API_KEY ?? "",
+      apiKey:  process.env.OPENROUTE_API_KEY_1 || process.env.OPENROUTE_API_KEY  ,
     });
 
     //const finalPrompt = `analyse the image ${userMessage}`;

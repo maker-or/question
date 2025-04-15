@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -71,10 +71,10 @@ import { createPDF } from "../utils/createPDF"; // <-- Added import for PDF conv
 // Add this import near the top with other imports
 // import { useTheme } from "next-themes";
 import { ThemeToggle } from "../components/theme-toggle";
-import TiptapEditor from "../components/TiptapEditor";
 
 // Add VoiceMode import near the top with other imports
 import VoiceMode from '@/components/VoiceMode';
+import { Button } from "@/components/ui/Button";
 
 // Add new ChatInfo interface
 interface ChatInfo {
@@ -107,12 +107,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   // Sanitize and format markdown code blocks before rendering.
   let sanitizedContent = content; // Start with the original content
 
-  // Improved regex for code blocks
+  // Improved regex for code blocks - process these first before other sanitization
   sanitizedContent = sanitizedContent.replace(
     /```(\w*)\n([\s\S]*?)```/g,
     (match, lang, code) => {
       const trimmedCode = code.trim();
-      return `<pre><code class="language-${lang}">${trimmedCode}</code></pre>`;
+      // Ensure code blocks are not wrapped in paragraphs by adding line breaks
+      return `\n\n<pre><code class="language-${lang}">${trimmedCode}</code></pre>\n\n`;
     }
   );
 
@@ -126,8 +127,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   sanitizedContent = sanitizedContent
     .replace(/\n(#{1,6}\s)/g, "\n\n$1")
     // Don't force each list item to start on a new paragraph
-    .replace(/\n([*-]\s)/g, "\n$1") // Changed from \n\n$1 to \n$1
-    .replace(/\n(\d+\.\s)/g, "\n$1") // Changed from \n\n$1 to \n$1
+    .replace(/\n([*-]\s)/g, "\n$1") 
+    .replace(/\n(\d+\.\s)/g, "\n$1") 
     .replace(/(\n\s*\n)/g, "$1\n");
 
   // Better handling for math expressions - preserve LaTeX syntax
@@ -193,7 +194,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
           [rehypeExternalLinks, { target: '_blank', rel: ['nofollow', 'noopener', 'noreferrer'] }]
         ]}
         components={{
-          code(props: unknown) {
+          code(props) {
             const { className, children, ...restProps } = props as { 
               className?: string; 
               children: React.ReactNode; 
@@ -220,6 +221,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
                 {children}
               </code>
             );
+          },
+          pre({ children }) {
+            // Use a div wrapper to prevent nesting issues
+            return <div>{children}</div>
           },
           img({ src, alt, ...props }) {
             return src ? (
@@ -311,6 +316,30 @@ const MODEL_OPTIONS = [
   {
     id: "meta-llama/llama-4-scout:free",
     name: "LLama 4 Scout",
+    tags: ["New"],
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="0.67em" viewBox="0 0 256 171" preserveAspectRatio="xMidYMid">
+        <defs>
+          <linearGradient id="llama-gradient-a" x1="13.878%" x2="89.144%" y1="55.934%" y2="58.694%">
+            <stop offset="0%" stopColor="#003366" />
+            <stop offset="40%" stopColor="#003366" />
+            <stop offset="83%" stopColor="#0066CC" />
+            <stop offset="100%" stopColor="#0066CC" />
+          </linearGradient>
+          <linearGradient id="llama-gradient-b" x1="54.315%" x2="54.315%" y1="82.782%" y2="39.307%">
+            <stop offset="0%" stopColor="#0066CC" />
+            <stop offset="100%" stopColor="#003366" />
+          </linearGradient>
+        </defs>
+        <path fill="#0066CC" d="M27.651 112.136c0 9.775 2.146 17.28 4.95 21.82 3.677 5.947 9.16 8.466 14.751 8.466 7.211 0 13.808-1.79 26.52-19.372 10.185-14.092 22.186-33.874 30.26-46.275l13.675-21.01c9.499-14.591 20.493-30.811 33.1-41.806C161.196 4.985 172.298 0 183.47 0c18.758 0 36.625 10.87 50.3 31.257C248.735 53.584 256 81.707 256 110.729c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363v-27.616c15.695 0 19.612-14.422 19.612-30.927 0-23.52-5.484-49.623-17.564-68.273-8.574-13.23-19.684-21.313-31.907-21.313-13.22 0-23.859 9.97-35.815 27.75-6.356 9.445-12.882 20.956-20.208 33.944l-8.066 14.289c-16.203 28.728-20.307 35.271-28.408 46.07-14.2 18.91-26.324 26.076-42.287 26.076-18.935 0-30.91-8.2-38.325-20.556C2.973 139.413 0 126.202 0 111.148l27.651.988Z" />
+        <path fill="url(#llama-gradient-a)" d="M21.802 33.206C34.48 13.666 52.774 0 73.757 0 85.91 0 97.99 3.597 110.605 13.897c13.798 11.261 28.505 29.805 46.853 60.368l6.58 10.967c15.881 26.459 24.917 40.07 30.205 46.49 6.802 8.243 11.565 10.7 17.752 10.7 15.695 0 19.612-14.422 19.612-30.927l24.393-.766c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363-11.395 0-21.49-2.475-32.654-13.007-8.582-8.083-18.615-22.443-26.334-35.352l-22.96-38.352C118.528 64.08 107.96 49.73 101.845 43.23c-6.578-6.988-15.036-15.428-28.532-15.428-10.923 0-20.2 7.666-27.963 19.39L21.802 33.206Z" />
+        <path fill="url(#llama-gradient-b)" d="M73.312 27.802c-10.923 0-20.2 7.666-27.963 19.39-10.976 16.568-17.698 41.245-17.698 64.944 0 9.775 2.146 17.28 4.95 21.82L9.027 149.482C2.973 139.413 0 126.202 0 111.148 0 83.772 7.514 55.24 21.802 33.206 34.48 13.666 52.774 0 73.757 0l-.445 27.802Z" />
+      </svg>
+    )
+  },
+  {
+    id: "meta-llama/llama-4-maverick-17b-128e-instruct",
+    name: "LLama 4 (groq)",
     tags: ["New"],
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="0.67em" viewBox="0 0 256 171" preserveAspectRatio="xMidYMid">
@@ -733,7 +762,8 @@ export default function Page() {
         console.error("Failed to parse saved chats", err);
       }
     }
-  }, []); // Keep this dependency array empty - only run once on mount
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Save current chat messages when they change
   useEffect(() => {
@@ -743,7 +773,8 @@ export default function Page() {
       // Update chat metadata
       updateChatMetadata(chatId, messages);
     }
-  }, [messages, chatId]); // This is fine - we need to respond to message changes
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, chatId]);
 
   // Handle keyboard shortcuts for chat management
   useEffect(() => {
@@ -765,7 +796,8 @@ export default function Page() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     }
-  }, []); // Fixed: return function was adding event listener again, now properly removes it
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Function to create a new chat
   const createNewChat = () => {
@@ -989,6 +1021,7 @@ export default function Page() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     }
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (chatId && messages.length > 0) {
@@ -997,6 +1030,7 @@ export default function Page() {
       // Update chat metadata
       updateChatMetadata(chatId, messages);
     }
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, chatId]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1252,6 +1286,7 @@ export default function Page() {
     return () => {
       if (hideTimeout) clearTimeout(hideTimeout);
     };
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hideTimeout]);
 
 
@@ -1407,26 +1442,24 @@ export default function Page() {
             bgColor = "bg-green-400/20";
             textColor = "text-green-500";
           } else if (tag === "Experimental") {
+            bgColor = "bg-purple-400/20";
             textColor = "text-purple-500";
           } else if (tag === "Fast") {
-            bgColor = "bg-yellow-400/20";
-            textColor = "text-yellow-600";
+            bgColor = "bg-emerald-400/20";
+            textColor = "text-emerald-500";
           } else if (tag === "Recommended") {
-            bgColor = "bg-teal-400/20";
-            textColor = "text-teal-500";
+            bgColor = "bg-blue-400/20";
+            textColor = "text-blue-500";
           } else if (tag === "Advanced" || tag === "Powerful") {
-            bgColor = "bg-red-400/20";
-            textColor = "text-red-500";
+            bgColor = "bg-orange-400/20";
+            textColor = "text-orange-500";
           } else if (tag === "Research" || tag === "Reasoning") {
-            bgColor = "bg-indigo-400/20";
-            textColor = "text-indigo-500";
+            bgColor = "bg-violet-400/20";
+            textColor = "text-violet-500";
           }
 
           return (
-            <span
-              key={idx}
-              className={`text-xs px-1.5 py-0.5 rounded-sm ${bgColor} ${textColor} font-medium`}
-            >
+            <span key={idx} className={`text-xs rounded-full px-2 py-0.5 ${bgColor} ${textColor}`}>
               {tag}
             </span>
           );
@@ -1505,6 +1538,23 @@ export default function Page() {
       )}
     </div>
   );
+
+  // Add state for filtering chats
+  const [searchQuery] = useState("");
+
+  // Filter chats based on search query
+  const filteredChats = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return savedChats;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    return savedChats.filter(
+      (chat) => 
+        chat.title.toLowerCase().includes(query) || 
+        (chat.firstMessage && chat.firstMessage.toLowerCase().includes(query))
+    );
+  }, [savedChats, searchQuery]);
 
   return (
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300 text-base`}>
@@ -1942,14 +1992,12 @@ export default function Page() {
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   {isDesignMode ? (
-                    <div className="max-w-[100vw] sm:max-w-[85vw] overflow-hidden md:max-w-xl rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c]">
-                      <TiptapEditor
-                        content={editedMessages[m.id] || m.content}
-                        onUpdate={(html) => handleMessageEdit(m.id, html)}
+                    <div className="max-w-[100vw] sm:max-w-[85vw] overflow-hidden md:max-w-xl rounded-t-3xl rounded-br-3xl dark:bg-[#1F2937] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] p-4">
+                      <textarea
+                        value={editedMessages[m.id] || m.content}
+                        onChange={(e) => handleMessageEdit(m.id, e.target.value)}
                         placeholder="Edit message..."
-                        className="min-h-[60px] bg-[#FF5E00]"
-                        messageId={m.id}
-
+                        className="w-full min-h-[60px] bg-transparent resize-vertical p-2 focus:outline-none text-[1.4em] sm:text-[1.6em] md:text-[2.2em]"
                       />
                     </div>
                   ) : ( //edit lo  user qurey
@@ -1961,13 +2009,12 @@ export default function Page() {
               ) : (
                 <div key={m.id} className="animate-slide-in group relative flex flex-col md:mx-0">
                   {isDesignMode ? (
-                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-hidden md:max-w-2xl rounded-xl">
-                      <TiptapEditor
-                        content={editedMessages[m.id] || m.content}
-                        onUpdate={(html) => handleMessageEdit(m.id, html)}
+                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-hidden md:max-w-2xl rounded-xl p-4 dark:bg-[#1a1a1a] bg-[#f8f8f8]">
+                      <textarea
+                        value={editedMessages[m.id] || m.content}
+                        onChange={(e) => handleMessageEdit(m.id, e.target.value)}
                         placeholder="Edit response..."
-                        className="min-h-[60px]"
-                        messageId={m.id}
+                        className="w-full min-h-[120px] bg-transparent resize-vertical p-2 focus:outline-none text-[1.1rem] sm:text-[1.2rem] md:text-[1.4rem]"
                       />
                     </div>
                   ) : (
@@ -2267,73 +2314,123 @@ export default function Page() {
       {/* Add Chat Switcher Modal */}
       {showChatSwitcher && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative w-full max-w-md rounded-lg bg-white dark:bg-[#1a1a1a] p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold dark:text-white text-black">Switch Chat</h2>
-              <button
-                onClick={() => setShowChatSwitcher(false)}
-                className="rounded-full p-1 dark:text-gray-400 text-gray-500 hover:dark:bg-gray-800 hover:bg-gray-200"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* <div className="mb-4">
-              <input 
-                type="text" 
-                placeholder="Search chats..." 
-                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#252525] p-2 text-black dark:text-white"
-              />
-            </div> */}
-
-            <div className="max-h-[60vh] overflow-y-auto">
-              {savedChats.length > 0 ? (
-                <div className="space-y-2">
-                  {savedChats.map((chat) => (
+          <div className="relative w-full max-w-lg rounded-3xl bg-[#E9E9E9] p-0 shadow-xl dark:bg-[#E9E9E9]">
+            {/* Close button */}
+            <button
+              onClick={() => setShowChatSwitcher(false)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/10 text-gray-600 hover:bg-black/20 transition-all"
+              aria-label="Close chat switcher"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            
+            {/* Today section */}
+            <div className="p-6">
+              <h2 className="mb-6 text-xl font-semibold text-gray-500">Today</h2>
+              
+              <div className="space-y-4 max-h-60 overflow-y-auto">
+                {filteredChats
+                  .filter(chat => {
+                    const chatDate = new Date(chat.updatedAt);
+                    const today = new Date();
+                    return chatDate.toDateString() === today.toDateString();
+                  })
+                  .map((chat) => (
                     <button
                       key={chat.id}
                       onClick={() => {
                         switchToChat(chat.id);
                         setShowChatSwitcher(false);
                       }}
-                      className={`w-full text-left rounded-md p-3 transition-colors ${chatId === chat.id
-                          ? 'bg-blue-100 dark:bg-blue-900/30'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
+                      className={`w-full flex items-start text-left py-2 px-3 rounded-xl transition-colors 
+                        ${chatId === chat.id 
+                          ? 'bg-white dark:bg-white shadow-sm' 
+                          : 'hover:bg-white/50 dark:hover:bg-white/50'}`}
                     >
-                      <div className="font-medium text-black dark:text-white truncate">
-                        {chat.title}
-                      </div>
-                      {chat.firstMessage && (
-                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {chat.firstMessage}
-                        </div>
-                      )}
-                      <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                        {new Date(chat.updatedAt).toLocaleDateString()} • {chat.messageCount} message{chat.messageCount !== 1 ? 's' : ''}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium text-black truncate">{chat.title}</h3>
+                        {chat.firstMessage && (
+                          <p className="mt-1 text-sm text-gray-500 line-clamp-1">
+                            {chat.firstMessage}
+                          </p>
+                        )}
                       </div>
                     </button>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No chats found
-                </div>
-              )}
+                
+                {filteredChats.filter(chat => {
+                  const chatDate = new Date(chat.updatedAt);
+                  const today = new Date();
+                  return chatDate.toDateString() === today.toDateString();
+                }).length === 0 && (
+                  <div className="py-6 text-center text-gray-500">
+                    No chats from today
+                  </div>
+                )}
+              </div>
             </div>
-
-            <div className="mt-4 flex justify-between">
-              <button
+            
+            {/* History section */}
+            <div className="border-t border-gray-300 p-6 relative">
+              <h2 className="text-xl font-medium text-black mb-6">History</h2>
+              
+              <div className="space-y-4 max-h-60 overflow-y-auto">
+                {filteredChats
+                  .filter(chat => {
+                    const chatDate = new Date(chat.updatedAt);
+                    const today = new Date();
+                    return chatDate.toDateString() !== today.toDateString();
+                  })
+                  .map((chat) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => {
+                        switchToChat(chat.id);
+                        setShowChatSwitcher(false);
+                      }}
+                      className={`w-full flex items-start text-left py-2 px-3 rounded-xl transition-colors 
+                        ${chatId === chat.id 
+                          ? 'bg-white dark:bg-white shadow-sm' 
+                          : 'hover:bg-white/50 dark:hover:bg-white/50'}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium text-black truncate">{chat.title}</h3>
+                        {chat.firstMessage && (
+                          <p className="mt-1 text-sm text-gray-500 line-clamp-1">
+                            {chat.firstMessage}
+                          </p>
+                        )}
+                        <div className="mt-1 text-xs text-gray-400">
+                          {new Date(chat.updatedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                
+                {filteredChats.filter(chat => {
+                  const chatDate = new Date(chat.updatedAt);
+                  const today = new Date();
+                  return chatDate.toDateString() !== today.toDateString();
+                }).length === 0 && (
+                  <div className="py-6 text-center text-gray-500">
+                    No older chats
+                  </div>
+                )}
+              </div>
+              
+              {/* Enhanced New chat button with inner shadows and dynamic effects */}
+              <Button
                 onClick={() => {
                   createNewChat();
                   setShowChatSwitcher(false);
                 }}
-                className="flex items-center justify-center  w-full gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-              >
-                <Plus className="h-4 w-4" />
-                New Chat
-              </button>
-
+                variant="primary"
+                size="icon"
+                isRounded={true}
+                className="absolute bottom-6 right-6 h-14 w-14"
+                aria-label="New Chat"
+                leftIcon={<Plus className="h-6 w-6 stroke-[2.5px]" />}
+              />
             </div>
           </div>
         </div>
@@ -2366,7 +2463,7 @@ export default function Page() {
               </button>
             </div>
             <div className="mb-6 text-gray-800 dark:text-gray-200">
-              <p className="mb-3">You've reached your free usage limit for the selected AI model today.</p>
+              <p className="mb-3">You&apos;ve reached your free usage limit for the selected AI model today.</p>
               <p>Please try one of these options:</p>
               <ul className="list-disc ml-5 mt-2 space-y-1">
                 <li>Switch to a different AI model</li>

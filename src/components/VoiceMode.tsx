@@ -64,13 +64,14 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onSubmit, onExit, lastResponse })
 
   // Cleanup effect
   useEffect(() => {
+    const audioElement = audioRef.current;
     return () => {
       stopVisualization();
       if (mediaRecorderRef.current && isRecording) {
         mediaRecorderRef.current.stop();
       }
-      if (audioRef.current) {
-        audioRef.current.pause();
+      if (audioElement) {
+        audioElement.pause();
       }
     };
   }, [isRecording]);
