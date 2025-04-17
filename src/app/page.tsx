@@ -5,6 +5,10 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import remarkEmoji from 'remark-emoji';
+import remarkBreaks from 'remark-breaks';
+
+import rehypeHighlight from "rehype-highlight";
 // Import footnotes as a default import to avoid type issues
 // import remarkFootnotes from "remark-footnotes";
 import rehypeSlug from "rehype-slug";
@@ -103,63 +107,75 @@ interface MarkdownRendererProps {
   content: string;
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
-  // Sanitize and format markdown code blocks before rendering.
-  let sanitizedContent = content; // Start with the original content
+// Add a new helper function to safely parse and format markdown with code blocks preserved
+const parseAndFormatContent = (content: string): string => {
+  // Regular expression to match code blocks (with optional language)
+  const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+  const segments: string[] = [];
+  let lastIndex = 0;
+  let match;
 
-  // Improved regex for code blocks - process these first before other sanitization
-  sanitizedContent = sanitizedContent.replace(
-    /```(\w*)\n([\s\S]*?)```/g,
-    (match, lang, code) => {
-      const trimmedCode = code.trim();
-      // Ensure code blocks are not wrapped in paragraphs by adding line breaks
-      return `\n\n<pre><code class="language-${lang}">${trimmedCode}</code></pre>\n\n`;
-    }
-  );
+  // Iterate over code blocks and split text into non-code and code segments
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    // Sanitize text before the current code block
+    const nonCodeSegment = content.substring(lastIndex, match.index);
+    const sanitizedNonCode = DOMPurify.sanitize(nonCodeSegment, {
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ['style'],
+    });
+    segments.push(sanitizedNonCode);
 
-  // Sanitize the content *excluding* code blocks
-  sanitizedContent = DOMPurify.sanitize(sanitizedContent, {
+    // Keep the code block intact, but trim the inner code
+    const lang = match[1];
+    const code = match[2].trim();
+    segments.push(`\n\n<pre><code class="language-${lang}">${code}</code></pre>\n\n`);
+    lastIndex = match.index + match[0].length;
+  }
+  // Sanitize any remaining part after the last code block
+  const remaining = content.substr(lastIndex);
+  const sanitizedRemaining = DOMPurify.sanitize(remaining, {
     USE_PROFILES: { html: true },
-    FORBID_TAGS: ['style'], // Remove style tags
+    FORBID_TAGS: ['style'],
   });
+  segments.push(sanitizedRemaining);
 
-  // Ensure proper spacing for lists and headings, but don't force newlines for list items
-  sanitizedContent = sanitizedContent
+  // Return the combined content
+  return segments.join("");
+};
+
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // First, handle horizontal rules separately
+  let processedContent = content.replace(
+    /^ {0,3}([-*_]){3,}\s*$/gm,
+    '\n\n<hr />\n\n'
+  );
+  // Use the new parser for improved sanitization (code blocks are preserved)
+  processedContent = parseAndFormatContent(processedContent);
+
+  // Additional replacements for spacing in lists and headings
+  processedContent = processedContent
     .replace(/\n(#{1,6}\s)/g, "\n\n$1")
-    // Don't force each list item to start on a new paragraph
-    .replace(/\n([*-]\s)/g, "\n$1") 
-    .replace(/\n(\d+\.\s)/g, "\n$1") 
+    .replace(/\n([*-]\s)/g, "\n$1")
+    .replace(/\n(\d+\.\s)/g, "\n$1")
     .replace(/(\n\s*\n)/g, "$1\n");
 
-  // Better handling for math expressions - preserve LaTeX syntax
-  sanitizedContent = sanitizedContent
-    // Convert display math to a form that won't be affected by other replacements
+  // Better handling for math expressions
+  processedContent = processedContent
     .replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => `\n\n$$${math.trim()}$$\n\n`)
-    // Normalize inline math delimiters \( ... \) → $ ... $
     .replace(/\\\(/g, "$").replace(/\\\)/g, "$")
-    // Preserve inline math while removing unnecessary spaces
     .replace(/\$([^$\n]+?)\$/g, (match, math) => `$${math.trim().replace(/\s+/g, ' ')}$`)
-    // Handle LaTeX vector notation
     .replace(/\\vec\{([^}]*)\}/g, "\\vec{$1}")
-    // Handle summation notation \sum_{a}^{b}
     .replace(/\\sum_\{([^}]*)\}\^\{([^}]*)\}/g, "\\sum_{$1}^{$2}")
-    // Handle fractions \frac{a}{b}
     .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "\\frac{$1}{$2}")
-    // Handle integrals \int_{a}^{b}
     .replace(/\\int_\{([^}]*)\}\^\{([^}]*)\}/g, "\\int_{$1}^{$2}")
-    // Handle derivatives \frac{d}{dx} notation
     .replace(/\\frac\{d\}\{d([a-zA-Z])\}/g, "\\frac{d}{d$1}")
-    // Handle partial derivatives \frac{\partial}{\partial x}
     .replace(/\\frac\{\\partial\}\{\\partial ([a-zA-Z])\}/g, "\\frac{\\partial}{\\partial $1}")
-    // Handle boxed expressions by removing the \boxed command but keeping the content
     .replace(/\\boxed\{([\s\S]*?)\}/g, "$1")
-    // Handle functions f(x), g(x), sin(x), cos(x), etc.
     .replace(/\\(sin|cos|tan|log|ln|exp|sec|csc|cot|arcsin|arccos|arctan)\{([^}]*)\}/g, "\\$1($2)")
-    // Handle general functions f(x), g(x), h(x)
     .replace(/([a-zA-Z])\s*\(\s*([a-zA-Z0-9+\-*/^_]+)\s*\)/g, "$1($2)")
-    // Handle matrix notation \begin{matrix} ... \end{matrix}
     .replace(/\\begin\{matrix\}([\s\S]*?)\\end\{matrix\}/g, "\\begin{matrix}$1\\end{matrix}")
-    // Normalize Greek letters
     .replace(/\\alpha/g, "α")
     .replace(/\\beta/g, "β")
     .replace(/\\gamma/g, "γ")
@@ -175,19 +191,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
       <ReactMarkdown
         remarkPlugins={[
           remarkGfm,
-          [remarkMath, {
-            singleDollarTextMath: true,
-            doubleBacktickMathDisplay: false
-          }],
+          remarkBreaks,
+          remarkEmoji,
+          [remarkMath, { singleDollarTextMath: true, doubleBacktickMathDisplay: false }],
         ]}
         rehypePlugins={[
-          [rehypeKatex, {
-            strict: false,
-            trust: true,
-            macros: {
-              "\\vec": "\\overrightarrow{#1}"
-            }
-          }],
+          rehypeHighlight,
+          [rehypeKatex, { strict: false, trust: true, macros: { "\\vec": "\\overrightarrow{#1}" } }],
           rehypeRaw,
           rehypeSlug,
           [rehypeAutolinkHeadings, { behavior: 'wrap' }],
@@ -195,32 +205,115 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         ]}
         components={{
           code(props) {
-            const { className, children, ...restProps } = props as { 
-              className?: string; 
-              children: React.ReactNode; 
-              [key: string]: unknown; 
+            const { className, children, ...restProps } = props as {
+              className?: string;
+              children: React.ReactNode;
+              [key: string]: unknown;
             };
-            
+
             const isInline = !className || !/language-(\w+)/.test(className);
             if (isInline) {
               return <code className={`${className} text-base md:text-lg`} {...restProps}>{children}</code>;
             }
+
             const match = /language-(\w+)/.exec(className || '');
-            return match ? (
-              <SyntaxHighlighter
-                style={vscDarkPlus}
-                language={match[1]}
-                PreTag="pre"
-                className="rounded-md text-base md:text-lg"
-                {...restProps}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
-            ) : (
-              <code className={`${className} text-base md:text-lg`} {...restProps}>
-                {children}
-              </code>
-            );
+            const codeString = String(children).replace(/\n$/, "");
+            const language = match ? match[1] : '';
+
+            if (match) {
+              return (
+                <div className="relative group my-4 overflow-hidden rounded-lg bg-[#1E1E1E] dark:bg-[#1E1E1E] shadow-lg">
+                  <div className="bg-[#1E1E1E] rounded-md">
+                    {/* Language display */}
+                    <div className="flex items-center justify-between px-4 py-1.5 bg-[#2D2D2D] dark:bg-[#2D2D2D] text-gray-300 border-b border-[#3E3E3E]">
+                      <span className="text-xs font-mono font-medium">{language}</span>
+                      {/* Copy button */}
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(codeString);
+                          setCopiedCode(codeString);
+                          setTimeout(() => setCopiedCode(null), 2000);
+                        }}
+                        className="flex items-center space-x-1 rounded-md hover:bg-gray-600 px-2 py-1 text-xs text-gray-200 transition-colors"
+                        aria-label="Copy code"
+                      >
+                        {copiedCode === codeString ? (
+                          <>
+                            <Check size={14} className="text-green-400" />
+                            <span className="text-green-400">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Enhanced code syntax highlighting */}
+                    <div className="syntax-highlighting-wrapper font-mono text-[15px] p-4">
+                      <SyntaxHighlighter
+                        style={{
+                          ...vscDarkPlus,
+                          'hljs-keyword':    { color: '#C678DD', fontWeight: '600' },  // purple
+                          'hljs-built_in':   { color: '#61AFEF' },                    // blue
+                          'hljs-string':     { color: '#98C379' },                    // green
+                          'hljs-literal':    { color: '#56B6C2' },                    // cyan (for true/false)
+                          'hljs-number':     { color: '#D19A66' },                    // orange
+                          'hljs-comment':    { color: '#5C6370', fontStyle: 'italic' },// muted gray
+                          'hljs-function':   { color: '#E5C07B' },                    // yellow
+                          'hljs-params':     { color: '#ABB2BF' },                    // light gray
+                          'hljs-variable':   { color: '#E06C75' },                    // red
+                          'hljs-operator':   { color: '#56B6C2' },                    // cyan
+                          'hljs-punctuation':{ color: '#ABB2BF' },                    // light gray
+                          'hljs-property':   { color: '#61AFEF' },                    // blue
+                          'hljs-title':      { color: '#E5C07B' }                     // yellow
+                        }}
+                        language={language}
+                        showLineNumbers={true}
+                        wrapLines={false}
+                        customStyle={{
+                          margin: 0,
+                          padding: 0,
+                          backgroundColor: 'transparent',
+                          lineHeight: 1.5,
+                          fontSize: '0.95em',
+                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                        }}
+                        codeTagProps={{
+                          style: {
+                            fontSize: 'inherit',
+                            lineHeight: 'inherit'
+                          }
+                        }}
+                        lineNumberStyle={{
+                          minWidth: '2.5em',
+                          paddingRight: '1em',
+                          marginRight: '1em',
+                          textAlign: 'right',
+                          borderRight: '1px solid #4B5563',
+                          color: '#0c0c0c',
+                          fontSize: '0.85em',
+                          userSelect: 'none'
+                        }}
+                        lineProps={() => ({
+                          style: {
+                            display: 'table-row',
+                            width: '100%'
+                          }
+                        })}
+                        wrapLongLines={true}
+                      >
+                        {codeString}
+                      </SyntaxHighlighter>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return <code className={`${className} text-base md:text-lg`} {...restProps}>{children}</code>;
           },
           pre({ children }) {
             // Use a div wrapper to prevent nesting issues
@@ -282,7 +375,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
           }
         }}
       >
-        {sanitizedContent}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );
@@ -312,7 +405,7 @@ interface VisionText {
 // Model options
 const MODEL_OPTIONS = [
 
-  
+
   {
     id: "meta-llama/llama-4-scout:free",
     name: "LLama 4 Scout",
@@ -364,7 +457,7 @@ const MODEL_OPTIONS = [
   {
     id: "meta-llama/llama-4-maverick:free",
     name: "LLama 4 Mavericks",
-     tags: ["New"],
+    tags: ["New"],
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="0.67em" viewBox="0 0 256 171" preserveAspectRatio="xMidYMid">
         <defs>
@@ -580,7 +673,7 @@ export default function Page() {
   const [showDesktopOnlyModal, setShowDesktopOnlyModal] = useState(false);
   console.log(showDesktopOnlyModal)
   const isMobile = useIsMobile();
-  
+
 
   // Get theme from next-themes instead
   // const { theme } = useTheme();
@@ -607,7 +700,7 @@ export default function Page() {
     onResponse: (response) => {
       // Remove the code that tries to read the response stream directly
       // This was causing the "ReadableStreamDefaultReader constructor" error
-      
+
       // Only reset input if NOT using the deepseek model to prevent refresh loop
       console.log(response);
       if (selectedModel !== "deepseek/deepseek-chat:free") {
@@ -638,12 +731,12 @@ export default function Page() {
         error.message?.includes("credits") ||
         error.message?.includes("429") ||
         error.message?.includes("CREDIT_LIMIT_EXCEEDED") ||
-        (error.cause && 
-         typeof error.cause === 'object' && 
-         'message' in error.cause &&
-         typeof (error.cause as { message: string }).message === 'string' &&
-         ((error.cause as { message: string }).message.includes("Rate limit exceeded") ||
-          (error.cause as { message: string }).message.includes("credits")))
+        (error.cause &&
+          typeof error.cause === 'object' &&
+          'message' in error.cause &&
+          typeof (error.cause as { message: string }).message === 'string' &&
+          ((error.cause as { message: string }).message.includes("Rate limit exceeded") ||
+            (error.cause as { message: string }).message.includes("credits")))
       ) {
         setShowCreditLimitError(true);
         setError("You've reached your free usage limit for AI models today. Please try a different model or try again tomorrow.");
@@ -762,7 +855,7 @@ export default function Page() {
         console.error("Failed to parse saved chats", err);
       }
     }
-// eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save current chat messages when they change
@@ -773,7 +866,7 @@ export default function Page() {
       // Update chat metadata
       updateChatMetadata(chatId, messages);
     }
-// eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, chatId]);
 
   // Handle keyboard shortcuts for chat management
@@ -796,7 +889,7 @@ export default function Page() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     }
-// eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Function to create a new chat
@@ -901,7 +994,7 @@ export default function Page() {
     }
   };
 
-  
+
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
@@ -910,7 +1003,7 @@ export default function Page() {
     }
   };
 
-  
+
 
   // Submit message and track the response for TTS - simplified to avoid state loops
   const submitMessage = async (messageText: string) => {
@@ -1021,7 +1114,7 @@ export default function Page() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     }
-// eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (chatId && messages.length > 0) {
@@ -1030,7 +1123,7 @@ export default function Page() {
       // Update chat metadata
       updateChatMetadata(chatId, messages);
     }
-// eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, chatId]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1286,7 +1379,7 @@ export default function Page() {
     return () => {
       if (hideTimeout) clearTimeout(hideTimeout);
     };
-// eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hideTimeout]);
 
 
@@ -1478,16 +1571,16 @@ export default function Page() {
               key={model.id}
               onClick={() => handleModelChange(model.id)}
               className={`p-3 rounded-lg transition-all duration-200 ${selectedModel === model.id
-                  ? "bg-[#683D24] border border-[#C9520D]"
-                  : "bg-[#252525] hover:bg-[#323232] border border-transparent"
+                ? "bg-[#683D24] border border-[#C9520D]"
+                : "bg-[#252525] hover:bg-[#323232] border border-transparent"
                 }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex items-center justify-center w-10 h-10 rounded-lg ${selectedModel === model.id
-                        ? "bg-[#C9520D]  text-white"
-                        : "bg-gray-700 text-gray-300"
+                      ? "bg-[#C9520D]  text-white"
+                      : "bg-gray-700 text-gray-300"
                       }`}
                   >
                     {model.icon}
@@ -1508,9 +1601,9 @@ export default function Page() {
   );
 
   // Create a reusable error display component function
-  const ErrorDisplay = ({ message, icon, actionText, onAction }: { 
-    message: string; 
-    icon?: React.ReactNode; 
+  const ErrorDisplay = ({ message, icon, actionText, onAction }: {
+    message: string;
+    icon?: React.ReactNode;
     actionText?: string;
     onAction?: () => void;
   }) => (
@@ -1547,11 +1640,11 @@ export default function Page() {
     if (!searchQuery.trim()) {
       return savedChats;
     }
-    
+
     const query = searchQuery.toLowerCase();
     return savedChats.filter(
-      (chat) => 
-        chat.title.toLowerCase().includes(query) || 
+      (chat) =>
+        chat.title.toLowerCase().includes(query) ||
         (chat.firstMessage && chat.firstMessage.toLowerCase().includes(query))
     );
   }, [savedChats, searchQuery]);
@@ -1710,8 +1803,8 @@ export default function Page() {
                     <button
                       onClick={() => handleMenuAction(toggleDesignMode)}
                       className={`w-full text-left px-4 py-2 text-sm ${isDesignMode
-                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232]'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232]'
                         } flex items-center gap-2`}
                       role="menuitem"
                     >
@@ -1959,7 +2052,7 @@ export default function Page() {
                 </div>
               )}
               {error && (
-                <ErrorDisplay 
+                <ErrorDisplay
                   message={error}
                   icon={error.includes("Internet connection") ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
@@ -2001,8 +2094,10 @@ export default function Page() {
                       />
                     </div>
                   ) : ( //edit lo  user qurey
-                    <div className="max-w-[95vw]  sm:max-w-[85vw] text-[1.4em] sm:text-[1.6em] tracking-tight rounded-t-3xl rounded-br-3xl dark:bg-[#FF5E00] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2.2em] p-3">
-                      <MarkdownRenderer content={m.content} />
+                    <div className="flex justify-start">
+                      <div className="inline-block max-w-[95vw] sm:max-w-[85vw] text-[1.4em] sm:text-[1.6em] tracking-tight rounded-t-3xl rounded-br-3xl dark:bg-[#292929] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2.2em] p-3">
+                        <MarkdownRenderer content={m.content} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2251,12 +2346,12 @@ export default function Page() {
                     </button>
 
                     <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" title="sphere Voice Assistant" aria-label={isVoiceMode ? "Exit Voice Mode" : "Activate sphere Voice Assistant"} onClick={toggleFullScreenVoiceMode} >
-                    {isRecording ? (
-                      <MicOff className="h-6 w-6" />
-                    ) : (
-                      <Mic className="h-6 w-6" />
-                    )}
-                  </button>
+                      {isRecording ? (
+                        <MicOff className="h-6 w-6" />
+                      ) : (
+                        <Mic className="h-6 w-6" />
+                      )}
+                    </button>
                   </div>
 
                 </div>
@@ -2269,7 +2364,7 @@ export default function Page() {
                 )}
 
                 {error && (
-                  <ErrorDisplay 
+                  <ErrorDisplay
                     message={error}
                     icon={error.includes("Internet connection") ? (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
@@ -2323,11 +2418,11 @@ export default function Page() {
             >
               <X className="h-4 w-4" />
             </button>
-            
+
             {/* Today section */}
             <div className="p-6">
               <h2 className="mb-6 text-xl font-semibold text-gray-500">Today</h2>
-              
+
               <div className="space-y-4 max-h-60 overflow-y-auto">
                 {filteredChats
                   .filter(chat => {
@@ -2343,8 +2438,8 @@ export default function Page() {
                         setShowChatSwitcher(false);
                       }}
                       className={`w-full flex items-start text-left py-2 px-3 rounded-xl transition-colors 
-                        ${chatId === chat.id 
-                          ? 'bg-white dark:bg-white shadow-sm' 
+                        ${chatId === chat.id
+                          ? 'bg-white dark:bg-white shadow-sm'
                           : 'hover:bg-white/50 dark:hover:bg-white/50'}`}
                     >
                       <div className="min-w-0 flex-1">
@@ -2357,23 +2452,23 @@ export default function Page() {
                       </div>
                     </button>
                   ))}
-                
+
                 {filteredChats.filter(chat => {
                   const chatDate = new Date(chat.updatedAt);
                   const today = new Date();
                   return chatDate.toDateString() === today.toDateString();
                 }).length === 0 && (
-                  <div className="py-6 text-center text-gray-500">
-                    No chats from today
-                  </div>
-                )}
+                    <div className="py-6 text-center text-gray-500">
+                      No chats from today
+                    </div>
+                  )}
               </div>
             </div>
-            
+
             {/* History section */}
             <div className="border-t border-gray-300 p-6 relative">
               <h2 className="text-xl font-medium text-black mb-6">History</h2>
-              
+
               <div className="space-y-4 max-h-60 overflow-y-auto">
                 {filteredChats
                   .filter(chat => {
@@ -2389,8 +2484,8 @@ export default function Page() {
                         setShowChatSwitcher(false);
                       }}
                       className={`w-full flex items-start text-left py-2 px-3 rounded-xl transition-colors 
-                        ${chatId === chat.id 
-                          ? 'bg-white dark:bg-white shadow-sm' 
+                        ${chatId === chat.id
+                          ? 'bg-white dark:bg-white shadow-sm'
                           : 'hover:bg-white/50 dark:hover:bg-white/50'}`}
                     >
                       <div className="min-w-0 flex-1">
@@ -2406,18 +2501,18 @@ export default function Page() {
                       </div>
                     </button>
                   ))}
-                
+
                 {filteredChats.filter(chat => {
                   const chatDate = new Date(chat.updatedAt);
                   const today = new Date();
                   return chatDate.toDateString() !== today.toDateString();
                 }).length === 0 && (
-                  <div className="py-6 text-center text-gray-500">
-                    No older chats
-                  </div>
-                )}
+                    <div className="py-6 text-center text-gray-500">
+                      No older chats
+                    </div>
+                  )}
               </div>
-              
+
               {/* Enhanced New chat button with inner shadows and dynamic effects */}
               <Button
                 onClick={() => {
@@ -2487,5 +2582,4 @@ export default function Page() {
     </main>
   );
 }
-
 
