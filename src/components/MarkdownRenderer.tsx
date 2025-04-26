@@ -350,4 +350,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   );
 };
 
-export default MarkdownRenderer;
+import dynamic from 'next/dynamic';
+
+// Export without SSR so DOMPurify and raw HTML parsing work only on client
+const MarkdownRendererNoSSR = dynamic(() => Promise.resolve(MarkdownRenderer), { ssr: false });
+export default MarkdownRendererNoSSR;
