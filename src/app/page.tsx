@@ -1,40 +1,41 @@
 "use client";
-import React, { useEffect, useState, useRef, useMemo } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import remarkEmoji from 'remark-emoji';
-import remarkBreaks from 'remark-breaks';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
+// import ReactMarkdown from "react-markdown";
+// import remarkGfm from "remark-gfm";
+// import rehypeRaw from "rehype-raw";
+// import remarkMath from "remark-math";
+// import rehypeKatex from "rehype-katex";
+// import remarkEmoji from 'remark-emoji';
+// import remarkBreaks from 'remark-breaks';
 
-import rehypeHighlight from "rehype-highlight";
+// import rehypeHighlight from "rehype-highlight";
 // Import footnotes as a default import to avoid type issues
 // import remarkFootnotes from "remark-footnotes";
-import rehypeSlug from "rehype-slug";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import rehypeExternalLinks from "rehype-external-links";
-import DOMPurify from "dompurify";
+// import rehypeSlug from "rehype-slug";
+// import rehypeAutolinkHeadings from "rehype-autolink-headings";
+// import rehypeExternalLinks from "rehype-external-links";
+// import DOMPurify from "dompurify";
 // import prettier from "prettier/standalone";
 // import parserBabel from "prettier/parser-babel";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+// import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+// import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 // import Image from "next/image";
 
 // Import KaTeX CSS for math rendering
 import 'katex/dist/katex.min.css';
-
+import { Video, Clipboard, BookOpenText } from "@phosphor-icons/react";
 // import { useChat } from "ai/react";
 import { useChat } from '@ai-sdk/react'
 import {
   Copy,
   Check,
   Globe,
-  Play,
+ // Play,
   // Share2,
   ArrowUp,
+
   Info,
-  RotateCw,
+  //RotateCw,
 
 
   // MessageCircleX,
@@ -50,11 +51,10 @@ import {
   ArrowLeftRight,
   FileText,
   Plus,
-  // Volume2,
-  // VolumeX,
+  Paperclip,
   ChevronDown,
-  Edit3, // Add Edit icon
-  Save, // Add Save icon
+ // Edit3, // Add Edit icon
+  //Save, // Add Save icon
   Mic,
   MicOff,
 } from "lucide-react";
@@ -80,6 +80,16 @@ import { ThemeToggle } from "../components/theme-toggle";
 import VoiceMode from '@/components/VoiceMode';
 import { Button } from "@/components/ui/Button";
 
+// Add this import near the top with other imports
+// import GrammarRenderer from "../components/GrammarRenderer";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import TopNav from '../components/TopNav';
+import { MODEL_OPTIONS } from '@/components/modeloption';
+import { ModelSelector } from '../components/ModelSelector';
+
+// Add new import for the timeline
+import Timeline from "../components/Timeline";
+
 // Add new ChatInfo interface
 interface ChatInfo {
   id: string;
@@ -103,284 +113,58 @@ const components: TLUiComponents = {};
 // -------------------------------------------------------------------------
 // MarkdownRenderer Component
 // -------------------------------------------------------------------------
-interface MarkdownRendererProps {
-  content: string;
-}
+// interface MarkdownRendererProps {
+//   content: string;
+// }
 
 // Add a new helper function to safely parse and format markdown with code blocks preserved
-const parseAndFormatContent = (content: string): string => {
-  // Regular expression to match code blocks (with optional language)
-  const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
-  const segments: string[] = [];
-  let lastIndex = 0;
-  let match;
+// const parseAndFormatContent = (content: string): string => {
+//   // Regular expression to match grammar notation blocks
+//   const grammarBlockRegex = /```grammar\n([\s\S]*?)```/g;
 
-  // Iterate over code blocks and split text into non-code and code segments
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    // Sanitize text before the current code block
-    const nonCodeSegment = content.substring(lastIndex, match.index);
-    const sanitizedNonCode = DOMPurify.sanitize(nonCodeSegment, {
-      USE_PROFILES: { html: true },
-      FORBID_TAGS: ['style'],
-    });
-    segments.push(sanitizedNonCode);
+//   // Regular expression to match code blocks (with optional language)
+//   const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
 
-    // Keep the code block intact, but trim the inner code
-    const lang = match[1];
-    const code = match[2].trim();
-    segments.push(`\n\n<pre><code class="language-${lang}">${code}</code></pre>\n\n`);
-    lastIndex = match.index + match[0].length;
-  }
-  // Sanitize any remaining part after the last code block
-  const remaining = content.substr(lastIndex);
-  const sanitizedRemaining = DOMPurify.sanitize(remaining, {
-    USE_PROFILES: { html: true },
-    FORBID_TAGS: ['style'],
-  });
-  segments.push(sanitizedRemaining);
+//   // First check for grammar blocks and mark them for special handling
+//   content = content.replace(grammarBlockRegex, (match, grammar) => {
+//     return `\n\n<grammar-block>${grammar}</grammar-block>\n\n`;
+//   });
 
-  // Return the combined content
-  return segments.join("");
-};
+//   let segments: string[] = [];
+//   let lastIndex = 0;
+//   let match;
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+//   // Iterate over code blocks and split text into non-code and code segments
+//   while ((match = codeBlockRegex.exec(content)) !== null) {
+//     // Sanitize text before the current code block
+//     const nonCodeSegment = content.substring(lastIndex, match.index);
+//     const sanitizedNonCode = DOMPurify.sanitize(nonCodeSegment, {
+//       USE_PROFILES: { html: true },
+//       FORBID_TAGS: ['style'],
+//     });
+//     segments.push(sanitizedNonCode);
 
-  // First, handle horizontal rules separately
-  let processedContent = content.replace(
-    /^ {0,3}([-*_]){3,}\s*$/gm,
-    '\n\n<hr />\n\n'
-  );
-  // Use the new parser for improved sanitization (code blocks are preserved)
-  processedContent = parseAndFormatContent(processedContent);
+//     // Keep the code block intact, but trim the inner code
+//     const lang = match[1];
+//     const code = match[2].trim();
+//     segments.push(`\n\n<pre><code class="language-${lang}">${code}</code></pre>\n\n`);
+//     lastIndex = match.index + match[0].length;
+//   }
+//   // Sanitize any remaining part after the last code block
+//   const remaining = content.substr(lastIndex);
+//   const sanitizedRemaining = DOMPurify.sanitize(remaining, {
+//     USE_PROFILES: { html: true },
+//     FORBID_TAGS: ['style'],
+//   });
+//   segments.push(sanitizedRemaining);
 
-  // Additional replacements for spacing in lists and headings
-  processedContent = processedContent
-    .replace(/\n(#{1,6}\s)/g, "\n\n$1")
-    .replace(/\n([*-]\s)/g, "\n$1")
-    .replace(/\n(\d+\.\s)/g, "\n$1")
-    .replace(/(\n\s*\n)/g, "$1\n");
+//   // Return the combined content
+//   return segments.join("");
+// };
 
-  // Better handling for math expressions
-  processedContent = processedContent
-    .replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => `\n\n$$${math.trim()}$$\n\n`)
-    .replace(/\\\(/g, "$").replace(/\\\)/g, "$")
-    .replace(/\$([^$\n]+?)\$/g, (match, math) => `$${math.trim().replace(/\s+/g, ' ')}$`)
-    .replace(/\\vec\{([^}]*)\}/g, "\\vec{$1}")
-    .replace(/\\sum_\{([^}]*)\}\^\{([^}]*)\}/g, "\\sum_{$1}^{$2}")
-    .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "\\frac{$1}{$2}")
-    .replace(/\\int_\{([^}]*)\}\^\{([^}]*)\}/g, "\\int_{$1}^{$2}")
-    .replace(/\\frac\{d\}\{d([a-zA-Z])\}/g, "\\frac{d}{d$1}")
-    .replace(/\\frac\{\\partial\}\{\\partial ([a-zA-Z])\}/g, "\\frac{\\partial}{\\partial $1}")
-    .replace(/\\boxed\{([\s\S]*?)\}/g, "$1")
-    .replace(/\\(sin|cos|tan|log|ln|exp|sec|csc|cot|arcsin|arccos|arctan)\{([^}]*)\}/g, "\\$1($2)")
-    .replace(/([a-zA-Z])\s*\(\s*([a-zA-Z0-9+\-*/^_]+)\s*\)/g, "$1($2)")
-    .replace(/\\begin\{matrix\}([\s\S]*?)\\end\{matrix\}/g, "\\begin{matrix}$1\\end{matrix}")
-    .replace(/\\alpha/g, "α")
-    .replace(/\\beta/g, "β")
-    .replace(/\\gamma/g, "γ")
-    .replace(/\\delta/g, "δ")
-    .replace(/\\theta/g, "θ")
-    .replace(/\\lambda/g, "λ")
-    .replace(/\\pi/g, "π")
-    .replace(/\\sigma/g, "σ")
-    .replace(/\\omega/g, "ω");
-
-  return (
-    <div className="prose max-w-none dark:prose-invert prose-lg">
-      <ReactMarkdown
-        remarkPlugins={[
-          remarkGfm,
-          remarkBreaks,
-          remarkEmoji,
-          [remarkMath, { singleDollarTextMath: true, doubleBacktickMathDisplay: false }],
-        ]}
-        rehypePlugins={[
-          rehypeHighlight,
-          [rehypeKatex, { strict: false, trust: true, macros: { "\\vec": "\\overrightarrow{#1}" } }],
-          rehypeRaw,
-          rehypeSlug,
-          [rehypeAutolinkHeadings, { behavior: 'wrap' }],
-          [rehypeExternalLinks, { target: '_blank', rel: ['nofollow', 'noopener', 'noreferrer'] }]
-        ]}
-        components={{
-          code(props) {
-            const { className, children, ...restProps } = props as {
-              className?: string;
-              children: React.ReactNode;
-              [key: string]: unknown;
-            };
-
-            const isInline = !className || !/language-(\w+)/.test(className);
-            if (isInline) {
-              return <code className={`${className} text-base md:text-lg`} {...restProps}>{children}</code>;
-            }
-
-            const match = /language-(\w+)/.exec(className || '');
-            const codeString = String(children).replace(/\n$/, "");
-            const language = match ? match[1] : '';
-
-            if (match) {
-              return (
-                <div className="relative group my-4 overflow-hidden rounded-lg bg-[#1E1E1E] dark:bg-[#1E1E1E] shadow-lg">
-                  <div className="bg-[#1E1E1E] rounded-md">
-                    {/* Language display */}
-                    <div className="flex items-center justify-between px-4 py-1.5 bg-[#2D2D2D] dark:bg-[#2D2D2D] text-gray-300 border-b border-[#3E3E3E]">
-                      <span className="text-xs font-mono font-medium">{language}</span>
-                      {/* Copy button */}
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(codeString);
-                          setCopiedCode(codeString);
-                          setTimeout(() => setCopiedCode(null), 2000);
-                        }}
-                        className="flex items-center space-x-1 rounded-md hover:bg-gray-600 px-2 py-1 text-xs text-gray-200 transition-colors"
-                        aria-label="Copy code"
-                      >
-                        {copiedCode === codeString ? (
-                          <>
-                            <Check size={14} className="text-green-400" />
-                            <span className="text-green-400">Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={14} />
-                            <span>Copy</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Enhanced code syntax highlighting */}
-                    <div className="syntax-highlighting-wrapper font-mono text-[15px] p-4">
-                      <SyntaxHighlighter
-                        style={{
-                          ...vscDarkPlus,
-                          'hljs-keyword':    { color: '#C678DD', fontWeight: '600' },  // purple
-                          'hljs-built_in':   { color: '#61AFEF' },                    // blue
-                          'hljs-string':     { color: '#98C379' },                    // green
-                          'hljs-literal':    { color: '#56B6C2' },                    // cyan (for true/false)
-                          'hljs-number':     { color: '#D19A66' },                    // orange
-                          'hljs-comment':    { color: '#5C6370', fontStyle: 'italic' },// muted gray
-                          'hljs-function':   { color: '#E5C07B' },                    // yellow
-                          'hljs-params':     { color: '#ABB2BF' },                    // light gray
-                          'hljs-variable':   { color: '#E06C75' },                    // red
-                          'hljs-operator':   { color: '#56B6C2' },                    // cyan
-                          'hljs-punctuation':{ color: '#ABB2BF' },                    // light gray
-                          'hljs-property':   { color: '#61AFEF' },                    // blue
-                          'hljs-title':      { color: '#E5C07B' }                     // yellow
-                        }}
-                        language={language}
-                        showLineNumbers={true}
-                        wrapLines={false}
-                        customStyle={{
-                          margin: 0,
-                          padding: 0,
-                          backgroundColor: 'transparent',
-                          lineHeight: 1.5,
-                          fontSize: '0.95em',
-                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
-                        }}
-                        codeTagProps={{
-                          style: {
-                            fontSize: 'inherit',
-                            lineHeight: 'inherit'
-                          }
-                        }}
-                        lineNumberStyle={{
-                          minWidth: '2.5em',
-                          paddingRight: '1em',
-                          marginRight: '1em',
-                          textAlign: 'right',
-                          borderRight: '1px solid #4B5563',
-                          color: '#0c0c0c',
-                          fontSize: '0.85em',
-                          userSelect: 'none'
-                        }}
-                        lineProps={() => ({
-                          style: {
-                            display: 'table-row',
-                            width: '100%'
-                          }
-                        })}
-                        wrapLongLines={true}
-                      >
-                        {codeString}
-                      </SyntaxHighlighter>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            return <code className={`${className} text-base md:text-lg`} {...restProps}>{children}</code>;
-          },
-          pre({ children }) {
-            // Use a div wrapper to prevent nesting issues
-            return <div>{children}</div>
-          },
-          img({ src, alt, ...props }) {
-            return src ? (
-              <span className="relative block w-full max-w-full my-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt={alt || ""}
-                  className="rounded-lg max-w-full max-h-[500px] object-contain mx-auto"
-                  loading="lazy"
-                  {...props}
-                />
-                {alt && <span className="block text-center text-sm md:text-base text-gray-500 mt-1">{alt}</span>}
-              </span>
-            ) : null;
-          },
-          table({ children }) {
-            return (
-              <div className="overflow-x-auto my-4">
-                <table className="border-collapse w-full border border-gray-700 text-base md:text-lg">
-                  {children}
-                </table>
-              </div>
-            );
-          },
-          th({ children }) {
-            return <th className="border border-gray-700 bg-gray-800 px-4 py-2 text-left text-base md:text-lg">{children}</th>;
-          },
-          td({ children }) {
-            return <td className="border border-gray-700 px-4 py-2 text-base md:text-lg">{children}</td>;
-          },
-          blockquote({ children }) {
-            return <blockquote className="border-l-4 pl-4 italic my-4 text-lg md:text-xl">{children}</blockquote>;
-          },
-          h1({ children }) {
-            return <h1 className="text-3xl font-bold mt-6 mb-4">{children}</h1>;
-          },
-          h2({ children }) {
-            return <h2 className="text-2xl font-bold mt-5 mb-3">{children}</h2>;
-          },
-          h3({ children }) {
-            return <h3 className="text-xl font-semibold mt-4 mb-2">{children}</h3>;
-          },
-          ul({ children }) {
-            return <ul className="list-disc list-inside pl-4 my-4 space-y-1 text-base md:text-lg">{children}</ul>;
-          },
-          ol({ children }) {
-            return <ol className="list-decimal list-inside pl-4 my-4 space-y-1 text-base md:text-lg">{children}</ol>;
-          },
-          li({ children }) {
-            return <li className="text-base md:text-lg flex"><span className="mr-2">•</span><span className="flex-1">{children}</span></li>;
-          },
-          p({ children }) {
-            return <p className="text-base md:text-lg my-3">{children}</p>;
-          }
-        }}
-      >
-        {processedContent}
-      </ReactMarkdown>
-    </div>
-  );
-};
-
+// -import const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => { /* full implementation removed */ };
+// +import { MarkdownRenderer } from "../components/MarkdownRenderer";
+// ...existing code...
 
 interface VisionText {
   text: {
@@ -401,204 +185,6 @@ interface VisionText {
 }
 
 // type Checked = DropdownMenuCheckboxItemProps["checked"];
-
-// Model options
-const MODEL_OPTIONS = [
-
-
-  {
-    id: "meta-llama/llama-4-scout:free",
-    name: "LLama 4 Scout",
-    tags: ["New"],
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="0.67em" viewBox="0 0 256 171" preserveAspectRatio="xMidYMid">
-        <defs>
-          <linearGradient id="llama-gradient-a" x1="13.878%" x2="89.144%" y1="55.934%" y2="58.694%">
-            <stop offset="0%" stopColor="#003366" />
-            <stop offset="40%" stopColor="#003366" />
-            <stop offset="83%" stopColor="#0066CC" />
-            <stop offset="100%" stopColor="#0066CC" />
-          </linearGradient>
-          <linearGradient id="llama-gradient-b" x1="54.315%" x2="54.315%" y1="82.782%" y2="39.307%">
-            <stop offset="0%" stopColor="#0066CC" />
-            <stop offset="100%" stopColor="#003366" />
-          </linearGradient>
-        </defs>
-        <path fill="#0066CC" d="M27.651 112.136c0 9.775 2.146 17.28 4.95 21.82 3.677 5.947 9.16 8.466 14.751 8.466 7.211 0 13.808-1.79 26.52-19.372 10.185-14.092 22.186-33.874 30.26-46.275l13.675-21.01c9.499-14.591 20.493-30.811 33.1-41.806C161.196 4.985 172.298 0 183.47 0c18.758 0 36.625 10.87 50.3 31.257C248.735 53.584 256 81.707 256 110.729c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363v-27.616c15.695 0 19.612-14.422 19.612-30.927 0-23.52-5.484-49.623-17.564-68.273-8.574-13.23-19.684-21.313-31.907-21.313-13.22 0-23.859 9.97-35.815 27.75-6.356 9.445-12.882 20.956-20.208 33.944l-8.066 14.289c-16.203 28.728-20.307 35.271-28.408 46.07-14.2 18.91-26.324 26.076-42.287 26.076-18.935 0-30.91-8.2-38.325-20.556C2.973 139.413 0 126.202 0 111.148l27.651.988Z" />
-        <path fill="url(#llama-gradient-a)" d="M21.802 33.206C34.48 13.666 52.774 0 73.757 0 85.91 0 97.99 3.597 110.605 13.897c13.798 11.261 28.505 29.805 46.853 60.368l6.58 10.967c15.881 26.459 24.917 40.07 30.205 46.49 6.802 8.243 11.565 10.7 17.752 10.7 15.695 0 19.612-14.422 19.612-30.927l24.393-.766c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363-11.395 0-21.49-2.475-32.654-13.007-8.582-8.083-18.615-22.443-26.334-35.352l-22.96-38.352C118.528 64.08 107.96 49.73 101.845 43.23c-6.578-6.988-15.036-15.428-28.532-15.428-10.923 0-20.2 7.666-27.963 19.39L21.802 33.206Z" />
-        <path fill="url(#llama-gradient-b)" d="M73.312 27.802c-10.923 0-20.2 7.666-27.963 19.39-10.976 16.568-17.698 41.245-17.698 64.944 0 9.775 2.146 17.28 4.95 21.82L9.027 149.482C2.973 139.413 0 126.202 0 111.148 0 83.772 7.514 55.24 21.802 33.206 34.48 13.666 52.774 0 73.757 0l-.445 27.802Z" />
-      </svg>
-    )
-  },
-  {
-    id: "meta-llama/llama-4-maverick-17b-128e-instruct",
-    name: "LLama 4 (groq)",
-    tags: ["New"],
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="0.67em" viewBox="0 0 256 171" preserveAspectRatio="xMidYMid">
-        <defs>
-          <linearGradient id="llama-gradient-a" x1="13.878%" x2="89.144%" y1="55.934%" y2="58.694%">
-            <stop offset="0%" stopColor="#003366" />
-            <stop offset="40%" stopColor="#003366" />
-            <stop offset="83%" stopColor="#0066CC" />
-            <stop offset="100%" stopColor="#0066CC" />
-          </linearGradient>
-          <linearGradient id="llama-gradient-b" x1="54.315%" x2="54.315%" y1="82.782%" y2="39.307%">
-            <stop offset="0%" stopColor="#0066CC" />
-            <stop offset="100%" stopColor="#003366" />
-          </linearGradient>
-        </defs>
-        <path fill="#0066CC" d="M27.651 112.136c0 9.775 2.146 17.28 4.95 21.82 3.677 5.947 9.16 8.466 14.751 8.466 7.211 0 13.808-1.79 26.52-19.372 10.185-14.092 22.186-33.874 30.26-46.275l13.675-21.01c9.499-14.591 20.493-30.811 33.1-41.806C161.196 4.985 172.298 0 183.47 0c18.758 0 36.625 10.87 50.3 31.257C248.735 53.584 256 81.707 256 110.729c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363v-27.616c15.695 0 19.612-14.422 19.612-30.927 0-23.52-5.484-49.623-17.564-68.273-8.574-13.23-19.684-21.313-31.907-21.313-13.22 0-23.859 9.97-35.815 27.75-6.356 9.445-12.882 20.956-20.208 33.944l-8.066 14.289c-16.203 28.728-20.307 35.271-28.408 46.07-14.2 18.91-26.324 26.076-42.287 26.076-18.935 0-30.91-8.2-38.325-20.556C2.973 139.413 0 126.202 0 111.148l27.651.988Z" />
-        <path fill="url(#llama-gradient-a)" d="M21.802 33.206C34.48 13.666 52.774 0 73.757 0 85.91 0 97.99 3.597 110.605 13.897c13.798 11.261 28.505 29.805 46.853 60.368l6.58 10.967c15.881 26.459 24.917 40.07 30.205 46.49 6.802 8.243 11.565 10.7 17.752 10.7 15.695 0 19.612-14.422 19.612-30.927l24.393-.766c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363-11.395 0-21.49-2.475-32.654-13.007-8.582-8.083-18.615-22.443-26.334-35.352l-22.96-38.352C118.528 64.08 107.96 49.73 101.845 43.23c-6.578-6.988-15.036-15.428-28.532-15.428-10.923 0-20.2 7.666-27.963 19.39L21.802 33.206Z" />
-        <path fill="url(#llama-gradient-b)" d="M73.312 27.802c-10.923 0-20.2 7.666-27.963 19.39-10.976 16.568-17.698 41.245-17.698 64.944 0 9.775 2.146 17.28 4.95 21.82L9.027 149.482C2.973 139.413 0 126.202 0 111.148 0 83.772 7.514 55.24 21.802 33.206 34.48 13.666 52.774 0 73.757 0l-.445 27.802Z" />
-      </svg>
-    )
-  },
-  {
-    id: "meta-llama/llama-4-maverick:free",
-    name: "LLama 4 Mavericks",
-    tags: ["New"],
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="0.67em" viewBox="0 0 256 171" preserveAspectRatio="xMidYMid">
-        <defs>
-          <linearGradient id="llama-gradient-a" x1="13.878%" x2="89.144%" y1="55.934%" y2="58.694%">
-            <stop offset="0%" stopColor="#003366" />
-            <stop offset="40%" stopColor="#003366" />
-            <stop offset="83%" stopColor="#0066CC" />
-            <stop offset="100%" stopColor="#0066CC" />
-          </linearGradient>
-          <linearGradient id="llama-gradient-b" x1="54.315%" x2="54.315%" y1="82.782%" y2="39.307%">
-            <stop offset="0%" stopColor="#0066CC" />
-            <stop offset="100%" stopColor="#003366" />
-          </linearGradient>
-        </defs>
-        <path fill="#0066CC" d="M27.651 112.136c0 9.775 2.146 17.28 4.95 21.82 3.677 5.947 9.16 8.466 14.751 8.466 7.211 0 13.808-1.79 26.52-19.372 10.185-14.092 22.186-33.874 30.26-46.275l13.675-21.01c9.499-14.591 20.493-30.811 33.1-41.806C161.196 4.985 172.298 0 183.47 0c18.758 0 36.625 10.87 50.3 31.257C248.735 53.584 256 81.707 256 110.729c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363v-27.616c15.695 0 19.612-14.422 19.612-30.927 0-23.52-5.484-49.623-17.564-68.273-8.574-13.23-19.684-21.313-31.907-21.313-13.22 0-23.859 9.97-35.815 27.75-6.356 9.445-12.882 20.956-20.208 33.944l-8.066 14.289c-16.203 28.728-20.307 35.271-28.408 46.07-14.2 18.91-26.324 26.076-42.287 26.076-18.935 0-30.91-8.2-38.325-20.556C2.973 139.413 0 126.202 0 111.148l27.651.988Z" />
-        <path fill="url(#llama-gradient-a)" d="M21.802 33.206C34.48 13.666 52.774 0 73.757 0 85.91 0 97.99 3.597 110.605 13.897c13.798 11.261 28.505 29.805 46.853 60.368l6.58 10.967c15.881 26.459 24.917 40.07 30.205 46.49 6.802 8.243 11.565 10.7 17.752 10.7 15.695 0 19.612-14.422 19.612-30.927l24.393-.766c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363-11.395 0-21.49-2.475-32.654-13.007-8.582-8.083-18.615-22.443-26.334-35.352l-22.96-38.352C118.528 64.08 107.96 49.73 101.845 43.23c-6.578-6.988-15.036-15.428-28.532-15.428-10.923 0-20.2 7.666-27.963 19.39L21.802 33.206Z" />
-        <path fill="url(#llama-gradient-b)" d="M73.312 27.802c-10.923 0-20.2 7.666-27.963 19.39-10.976 16.568-17.698 41.245-17.698 64.944 0 9.775 2.146 17.28 4.95 21.82L9.027 149.482C2.973 139.413 0 126.202 0 111.148 0 83.772 7.514 55.24 21.802 33.206 34.48 13.666 52.774 0 73.757 0l-.445 27.802Z" />
-      </svg>
-    )
-  },
-  {
-    id: "deepseek/deepseek-chat-v3-0324:free",
-    name: "DeepSeek v3",
-    tags: ["Recommended"],
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" style={{ flex: "none", lineHeight: 1 }} viewBox="0 0 24 24" width="1em" height="1em">
-        <path fill="#0066CC" d="M23.748 4.482c-.254-.124-.364.113-.512.234-.051.039-.094.09-.137.136-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.156-.708-.311-.955-.65-.172-.241-.219-.51-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.093.172.187.129.323-.082.28-.18.552-.266.833-.055.179-.137.217-.329.14a5.526 5.526 0 0 1-1.736-1.18c-.857-.828-1.631-1.742-2.597-2.458a11.365 11.365 0 0 0-.689-.471c-.985-.957.13-1.743.388-1.836.27-.098.093-.432-.779-.428-.872.004-1.67.295-2.687.684a3.055 3.055 0 0 1-.465.137 9.597 9.597 0 0 0-2.883-.102c-1.885.21-3.39 1.102-4.497 2.623C.082 8.606-.231 10.684.152 12.85c.403 2.284 1.569 4.175 3.36 5.653 1.858 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.133-.284 4.994-1.86.47.234.962.327 1.78.397.63.059 1.236-.03 1.705-.128.735-.156.684-.837.419-.961-2.155-1.004-1.682-.595-2.113-.926 1.096-1.296 2.746-2.642 3.392-7.003.05-.347.007-.565 0-.845-.004-.17.035-.237.23-.256a4.173 4.173 0 0 0 1.545-.475c1.396-.763 1.96-2.015 2.093-3.517.02-.23-.004-.467-.247-.588zM11.581 18c-2.089-1.642-3.102-2.183-3.52-2.16-.392.024-.321.471-.235.763.09.288.207.486.371.739.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.167-1.361-.802-2.5-1.86-3.301-3.307-.774-1.393-1.224-2.887-1.298-4.482-.02-.386.093-.522.477-.592a4.696 4.696 0 0 1 1.529-.039c2.132.312 3.946 1.265 5.468 2.774.868.86 1.525 1.887 2.202 2.891.72 1.066 1.494 2.082 2.48 2.914.348.292.625.514.891.677-.802.09-2.14.11-3.054-.614zm1-6.44a.306.306 0 0 1 .415-.287.302.302 0 0 1 .2.288.306.306 0 0 1-.31.307.303.303 0 0 1-.304-.308zm3.11 1.596c-.2.081-.399.151-.59.16a1.245 1.245 0 0 1-.798-.254c-.274-.23-.47-.358-.552-.758a1.73 1.73 0 0 1 .016-.588c.07-.327-.008-.537-.239-.727-.187-.156-.426-.199-.688-.199a.559.559 0 0 1-.254-.078.253.253 0 0 1-.114-.358c.028-.054.16-.186.192-.21.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.391.451.462.576.685.914.176.265.336.537.445.848.067.195-.019.354-.25.452z" />
-      </svg>
-    )
-  },
-  {
-    id: "deepseek/deepseek-r1-zero:free",
-    name: "DeepSeek R1",
-    tags: ["Reasoning"],
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" style={{ flex: "none", lineHeight: 1 }} viewBox="0 0 24 24" width="1em" height="1em">
-        <path fill="#0066CC" d="M23.748 4.482c-.254-.124-.364.113-.512.234-.051.039-.094.09-.137.136-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.156-.708-.311-.955-.65-.172-.241-.219-.51-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.093.172.187.129.323-.082.28-.18.552-.266.833-.055.179-.137.217-.329.14a5.526 5.526 0 0 1-1.736-1.18c-.857-.828-1.631-1.742-2.597-2.458a11.365 11.365 0 0 0-.689-.471c-.985-.957.13-1.743.388-1.836.27-.098.093-.432-.779-.428-.872.004-1.67.295-2.687.684a3.055 3.055 0 0 1-.465.137 9.597 9.597 0 0 0-2.883-.102c-1.885.21-3.39 1.102-4.497 2.623C.082 8.606-.231 10.684.152 12.85c.403 2.284 1.569 4.175 3.36 5.653 1.858 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.133-.284 4.994-1.86.47.234.962.327 1.78.397.63.059 1.236-.03 1.705-.128.735-.156.684-.837.419-.961-2.155-1.004-1.682-.595-2.113-.926 1.096-1.296 2.746-2.642 3.392-7.003.05-.347.007-.565 0-.845-.004-.17.035-.237.23-.256a4.173 4.173 0 0 0 1.545-.475c1.396-.763 1.96-2.015 2.093-3.517.02-.23-.004-.467-.247-.588zM11.581 18c-2.089-1.642-3.102-2.183-3.52-2.16-.392.024-.321.471-.235.763.09.288.207.486.371.739.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.167-1.361-.802-2.5-1.86-3.301-3.307-.774-1.393-1.224-2.887-1.298-4.482-.02-.386.093-.522.477-.592a4.696 4.696 0 0 1 1.529-.039c2.132.312 3.946 1.265 5.468 2.774.868.86 1.525 1.887 2.202 2.891.72 1.066 1.494 2.082 2.48 2.914.348.292.625.514.891.677-.802.09-2.14.11-3.054-.614zm1-6.44a.306.306 0 0 1 .415-.287.302.302 0 0 1 .2.288.306.306 0 0 1-.31.307.303.303 0 0 1-.304-.308zm3.11 1.596c-.2.081-.399.151-.59.16a1.245 1.245 0 0 1-.798-.254c-.274-.23-.47-.358-.552-.758a1.73 1.73 0 0 1 .016-.588c.07-.327-.008-.537-.239-.727-.187-.156-.426-.199-.688-.199a.559.559 0 0 1-.254-.078.253.253 0 0 1-.114-.358c.028-.054.16-.186.192-.21.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.391.451.462.576.685.914.176.265.336.537.445.848.067.195-.019.354-.25.452z" />
-      </svg>
-    )
-  },
-  {
-    id: "google/gemini-2.5-pro-exp-03-25:free",
-    name: "Gemini Pro 2.5",
-    tags: ["Experimental"],
-    icon: (
-      <svg height="1em" style={{ flex: "none", lineHeight: 1 }} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="gemini-gradient" x1="0%" x2="68.73%" y1="100%" y2="30.395%">
-            <stop offset="0%" stopColor="#0066CC"></stop>
-            <stop offset="52.021%" stopColor="#0066CC"></stop>
-            <stop offset="100%" stopColor="#3399FF"></stop>
-          </linearGradient>
-        </defs>
-        <path d="M12 24A14.304 14.304 0 000 12 14.304 14.304 0 0012 0a14.305 14.305 0 0012 12 14.305 14.305 0 00-12 12" fill="url(#gemini-gradient)" fillRule="nonzero"></path>
-      </svg>
-    )
-  },
-  {
-    id: "meta-llama/llama-3.3-70b-instruct:free",
-    name: "Llama 3.3 70B",
-    // tags: ["Powerful"],
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="0.67em" viewBox="0 0 256 171" preserveAspectRatio="xMidYMid">
-        <defs>
-          <linearGradient id="llama-gradient-a" x1="13.878%" x2="89.144%" y1="55.934%" y2="58.694%">
-            <stop offset="0%" stopColor="#003366" />
-            <stop offset="40%" stopColor="#003366" />
-            <stop offset="83%" stopColor="#0066CC" />
-            <stop offset="100%" stopColor="#0066CC" />
-          </linearGradient>
-          <linearGradient id="llama-gradient-b" x1="54.315%" x2="54.315%" y1="82.782%" y2="39.307%">
-            <stop offset="0%" stopColor="#0066CC" />
-            <stop offset="100%" stopColor="#003366" />
-          </linearGradient>
-        </defs>
-        <path fill="#0066CC" d="M27.651 112.136c0 9.775 2.146 17.28 4.95 21.82 3.677 5.947 9.16 8.466 14.751 8.466 7.211 0 13.808-1.79 26.52-19.372 10.185-14.092 22.186-33.874 30.26-46.275l13.675-21.01c9.499-14.591 20.493-30.811 33.1-41.806C161.196 4.985 172.298 0 183.47 0c18.758 0 36.625 10.87 50.3 31.257C248.735 53.584 256 81.707 256 110.729c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363v-27.616c15.695 0 19.612-14.422 19.612-30.927 0-23.52-5.484-49.623-17.564-68.273-8.574-13.23-19.684-21.313-31.907-21.313-13.22 0-23.859 9.97-35.815 27.75-6.356 9.445-12.882 20.956-20.208 33.944l-8.066 14.289c-16.203 28.728-20.307 35.271-28.408 46.07-14.2 18.91-26.324 26.076-42.287 26.076-18.935 0-30.91-8.2-38.325-20.556C2.973 139.413 0 126.202 0 111.148l27.651.988Z" />
-        <path fill="url(#llama-gradient-a)" d="M21.802 33.206C34.48 13.666 52.774 0 73.757 0 85.91 0 97.99 3.597 110.605 13.897c13.798 11.261 28.505 29.805 46.853 60.368l6.58 10.967c15.881 26.459 24.917 40.07 30.205 46.49 6.802 8.243 11.565 10.7 17.752 10.7 15.695 0 19.612-14.422 19.612-30.927l24.393-.766c0 17.253-3.4 29.93-9.187 39.946-5.591 9.686-16.488 19.363-34.818 19.363-11.395 0-21.49-2.475-32.654-13.007-8.582-8.083-18.615-22.443-26.334-35.352l-22.96-38.352C118.528 64.08 107.96 49.73 101.845 43.23c-6.578-6.988-15.036-15.428-28.532-15.428-10.923 0-20.2 7.666-27.963 19.39L21.802 33.206Z" />
-        <path fill="url(#llama-gradient-b)" d="M73.312 27.802c-10.923 0-20.2 7.666-27.963 19.39-10.976 16.568-17.698 41.245-17.698 64.944 0 9.775 2.146 17.28 4.95 21.82L9.027 149.482C2.973 139.413 0 126.202 0 111.148 0 83.772 7.514 55.24 21.802 33.206 34.48 13.666 52.774 0 73.757 0l-.445 27.802Z" />
-      </svg>
-    )
-  },
-  {
-    id: "qwen/qwen-2.5-coder-32b-instruct:free",
-    name: "Qwen 2.5 Coder",
-    // tags: ["New"],
-    icon: (
-      <svg fill="currentColor" fillRule="evenodd" height="1em" style={{ flex: "none", lineHeight: 1 }} viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><title>Qwen</title><path d="M12.604 1.34c.393.69.784 1.382 1.174 2.075a.18.18 0 00.157.091h5.552c.174 0 .322.11.446.327l1.454 2.57c.19.337.24.478.024.837-.26.43-.513.864-.76 1.3l-.367.658c-.106.196-.223.28-.04.512l2.652 4.637c.172.301.111.494-.043.77-.437.785-.882 1.564-1.335 2.34-.159.272-.352.375-.68.37-.777-.016-1.552-.01-2.327.016a.099.099 0 00-.081.05 575.097 575.097 0 01-2.705 4.74c-.169.293-.38.363-.725.364-.997.003-2.002.004-3.017.002a.537.537 0 01-.465-.271l-1.335-2.323a.09.09 0 00-.083-.049H4.982c-.285.03-.553-.001-.805-.092l-1.603-2.77a.543.543 0 01-.002-.54l1.207-2.12a.198.198 0 000-.197 550.951 550.951 0 01-1.875-3.272l-.79-1.395c-.16-.31-.173-.496.095-.965.465-.813.927-1.625 1.387-2.436.132-.234.304-.334.584-.335a338.3 338.3 0 012.589-.001.124.124 0 00.107-.063l2.806-4.895a.488.488 0 01.422-.246c.524-.001 1.053 0 1.583-.006L11.704 1c.341-.003.724.032.9.34zm-3.432.403a.06.06 0 00-.052.03L6.254 6.788a.157.157 0 01-.135.078H3.253c-.056 0-.07.025-.041.074l5.81 10.156c.025.042.013.062-.034.063l-2.795.015a.218.218 0 00-.2.116l-1.32 2.31c-.044.078-.021.118.068.118l5.716.008c.046 0 .08.02.104.061l1.403 2.454c.046.081.092.082.139 0l5.006-8.76.783-1.382a.055.055 0 01.096 0l1.424 2.53a.122.122 0 00.107.062l2.763-.02a.04.04 0 00.035-.02.041.041 0 000-.04l-2.9-5.086a.108.108 0 010-.113l.293-.507 1.12-1.977c.024-.041.012-.062-.035-.062H9.2c-.059 0-.073-.026-.043-.077l1.434-2.505a.107.107 0 000-.114L9.225 1.774a.06.06 0 00-.053-.031zm6.29 8.02c.046 0 .058.02.034.06l-.832 1.465-2.613 4.585a.056.056 0 01-.05.029.058.058 0 01-.05-.029L8.498 9.841c-.02-.034-.01-.052.028-.054l.216-.012 6.722-.012z"></path></svg>
-    )
-  },
-  {
-    id: "mistralai/mistral-small-3.1-24b-instruct:free",
-    name: "Mistral 3.1 24B",
-    // tags: ["Advanced"],
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" viewBox="0 0 256 233" width="1em" height="0.91em">
-        <path d="M186.18182 0h46.54545v46.54545h-46.54545z" />
-        <path fill="#F7D046" d="M209.45454 0h46.54545v46.54545h-46.54545z" />
-        <path d="M0 0h46.54545v46.54545H0zM0 46.54545h46.54545V93.0909H0zM0 93.09091h46.54545v46.54545H0zM0 139.63636h46.54545v46.54545H0zM0 186.18182h46.54545v46.54545H0z" />
-        <path fill="#F7D046" d="M23.27273 0h46.54545v46.54545H23.27273z" />
-        <path fill="#F2A73B" d="M209.45454 46.54545h46.54545V93.0909h-46.54545zM23.27273 46.54545h46.54545V93.0909H23.27273z" />
-        <path d="M139.63636 46.54545h46.54545V93.0909h-46.54545z" />
-        <path fill="#F2A73B" d="M162.90909 46.54545h46.54545V93.0909h-46.54545zM69.81818 46.54545h46.54545V93.0909H69.81818z" />
-        <path fill="#EE792F" d="M116.36364 93.09091h46.54545v46.54545h-46.54545zM162.90909 93.09091h46.54545v46.54545h-46.54545zM69.81818 93.09091h46.54545v46.54545H69.81818z" />
-        <path d="M93.09091 139.63636h46.54545v46.54545H93.09091z" />
-        <path fill="#EB5829" d="M116.36364 139.63636h46.54545v46.54545h-46.54545z" />
-        <path fill="#EE792F" d="M209.45454 93.09091h46.54545v46.54545h-46.54545zM23.27273 93.09091h46.54545v46.54545H23.27273.z" />
-        <path d="M186.18182 139.63636h46.54545v46.54545h-46.54545z" />
-        <path fill="#EB5829" d="M209.45454 139.63636h46.54545v46.54545h-46.54545z" />
-        <path d="M186.18182 186.18182h46.54545v46.54545h-46.54545z" />
-        <path fill="#EB5829" d="M23.27273 139.63636h46.54545v46.54545H23.27273z" />
-        <path fill="#EA3326" d="M209.45454 186.18182h46.54545v46.54545h-46.54545zM23.27273 186.18182h46.54545v46.54545H23.27273z" />
-      </svg>
-    )
-  },
-  {
-    id: "google/gemma-3-27b-it:free",
-    name: "Gemma 3",
-    //tags: ["New"],
-    icon: (
-      <svg width="1em" height="1em" viewBox="0 0 256 262" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
-        <path d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027" fill="#0066CC" />
-        <path d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1" fill="#0066CC" />
-        <path d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782" fill="#3399FF" />
-        <path d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251" fill="#EB4335" />
-      </svg>
-    )
-  },
-  {
-    id: "microsoft/phi-3-medium-128k-instruct:free",
-    name: "Phi-3",
-    // tags: ["Compact"],
-    icon: (
-      <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" preserveAspectRatio="xMidYMid">
-        <path fill="#F1511B" d="M121.666 121.666H0V0h121.666z" />
-        <path fill="#80CC28" d="M256 121.666H134.335V0H256z" />
-        <path fill="#00ADEF" d="M121.663 256.002H0V134.336h121.663z" />
-        <path fill="#FBBC09" d="M256 256.002H134.335V134.336H256z" />
-      </svg>
-    )
-  },
-];
 
 // Add isMobile detection hook
 const useIsMobile = () => {
@@ -626,7 +212,7 @@ const useIsMobile = () => {
 export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false); // New state to track token streaming
-  const [isWebSearchLoading, setIsWebSearchLoading] = useState(false);
+  // const [isWebSearchLoading, setIsWebSearchLoading] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<string | null>(null);
@@ -635,7 +221,7 @@ export default function Page() {
   );
   const [showModelSelector, setShowModelSelector] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchLinks, setSearchLinks] = useState<string[]>([]);
+  // const [searchLinks, setSearchLinks] = useState<string[]>([]);
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   // const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
   const whiteboardRef = useRef<HTMLDivElement>(null);
@@ -643,6 +229,7 @@ export default function Page() {
   const [skipAutoScroll, setSkipAutoScroll] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenForMessageId, setRegenForMessageId] = useState<string | null>(null);
+  console.log(regenForMessageId)
   // const [showStatusBar, setShowStatusBar] = React.useState<Checked>(true);
   // const [showActivityBar, setShowActivityBar] = React.useState<Checked>(false);
   // const [showPanel, setShowPanel] = React.useState<Checked>(false);
@@ -674,6 +261,11 @@ export default function Page() {
   console.log(showDesktopOnlyModal)
   const isMobile = useIsMobile();
 
+  // Add state for timeline hover
+  const [timelineHovered, setTimelineHovered] = useState(false);
+  console.log(timelineHovered)
+  // Track currently selected message in timeline
+  const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
 
   // Get theme from next-themes instead
   // const { theme } = useTheme();
@@ -764,7 +356,8 @@ export default function Page() {
       ) {
         setError("Internet connection lost. Please check your network and try again.");
       } else {
-        setError("An error occurred. Please try again.");
+        // Default fallback for unexpected errors - show high demand message
+        setError("we are facing a high demand pls try again");
       }
     },
   });
@@ -1164,10 +757,10 @@ export default function Page() {
     }
   };
 
-  const extractLinks = (content: string): string[] => {
-    const linkRegex = /https?:\/\/[^\s]+/g;
-    return content.match(linkRegex) ?? [];
-  };
+  // const extractLinks = (content: string): string[] => {
+  //   const linkRegex = /https?:\/\/[^\s]+/g;
+  //   return content.match(linkRegex) ?? [];
+  // };
 
   function extractText(data: string): string | null {
     try {
@@ -1182,10 +775,62 @@ export default function Page() {
   // -----------------------------------------------------------------------
   // Form Submission Handler
   // -----------------------------------------------------------------------
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    setAttachments(prev => [...prev, ...files]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const sendPdfAttachment = async () => {
+    if (attachments.length === 0) return;
+    // read files as base64
+    const dataUrls = await Promise.all(attachments.map(file => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    })));
+    // send to OpenRouter directly
+    const messagesPayload = [
+      { type: 'text', text: input },
+      ...dataUrls.map((dataUrl, idx) => ({
+        type: 'file',
+        file: { filename: attachments[idx].name, file_data: dataUrl.split(',')[1] }
+      }))
+    ];
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_OPENROUTER_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: '{{MODEL}}',
+        messages: [{ role: 'user', content: messagesPayload }],
+        plugins: [{ id: 'file-parser', pdf: { engine: '{{ENGINE}}' } }],
+      }),
+    });
+    const data = await res.json();
+    console.log('PDF response:', data);
+    // reset file field
+    setAttachments([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!input.trim()) return;
-
+    if (!input.trim() && attachments.length === 0) return;
+    if (attachments.length > 0) {
+      await sendPdfAttachment();
+      return;
+    }
     setSkipAutoScroll(false);
     setIsLoading(true);
     setIsStreaming(false); // Reset streaming state at beginning
@@ -1290,38 +935,39 @@ export default function Page() {
     }
   };
 
-  const handleSearchWeb = async () => {
-    if (!lastQuery.trim()) {
-      console.error("No query to search");
-      return;
-    }
+  // const handleSearchWeb = async () => {
+  //   if (!lastQuery.trim()) {
+  //     console.error("No query to search");
+  //     return;
+  //   }
+  //   console.log(handleSearchWeb)
 
-    setIsWebSearchLoading(true);
-    try {
-      const response = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [{ role: "user", content: lastQuery }],
-        }),
-      });
+  //   setIsWebSearchLoading(true);
+  //   try {
+  //     const response = await fetch("/api/search", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         messages: [{ role: "user", content: lastQuery }],
+  //       }),
+  //     });
 
-      if (!response.ok) {
-        throw new Error(`Search failed: HTTP status ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`Search failed: HTTP status ${response.status}`);
+  //     }
 
-      const data = await response.json();
-      const links = extractLinks(data.results);
-      setSearchLinks(links);
-      const cleanedResults = data.results.replace(/https?:\/\/[^\s]+/g, "");
-      setSearchResults(cleanedResults);
-    } catch (error) {
-      console.error("Error during web search:", error);
-      setSearchResults("Failed to fetch search results. Please try again.");
-    } finally {
-      setIsWebSearchLoading(false);
-    }
-  };
+  //     const data = await response.json();
+  //     const links = extractLinks(data.results);
+  //     setSearchLinks(links);
+  //     const cleanedResults = data.results.replace(/https?:\/\/[^\s]+/g, "");
+  //     setSearchResults(cleanedResults);
+  //   } catch (error) {
+  //     console.error("Error during web search:", error);
+  //     setSearchResults("Failed to fetch search results. Please try again.");
+  //   } finally {
+  //     setIsWebSearchLoading(false);
+  //   }
+  // };
 
   // Add credit limit error state
   const [showCreditLimitError, setShowCreditLimitError] = useState(false);
@@ -1355,22 +1001,22 @@ export default function Page() {
     }
   };
   console.log(shareChat)
-  const regenerateQuery = (query: string, messageId: string) => {
-    setRegenForMessageId(messageId);
-    setIsRegenerating(true);
-    setSkipAutoScroll(true);
-    setIsLoading(true);
-    setError(null);
-    setInput(query);
+  // const regenerateQuery = (query: string, messageId: string) => {
+  //   setRegenForMessageId(messageId);
+  //   setIsRegenerating(true);
+  //   setSkipAutoScroll(true);
+  //   setIsLoading(true);
+  //   setError(null);
+  //   setInput(query);
 
 
-    setTimeout(() => {
-      const syntheticEvent = {
-        preventDefault: () => { },
-      } as React.FormEvent;
-      handleSubmit(syntheticEvent);
-    }, 10);
-  };
+  //   setTimeout(() => {
+  //     const syntheticEvent = {
+  //       preventDefault: () => { },
+  //     } as React.FormEvent;
+  //     handleSubmit(syntheticEvent);
+  //   }, 10);
+  // };
 
 
 
@@ -1521,84 +1167,7 @@ export default function Page() {
   };
 
   // Add this function to render model tags with appropriate styling
-  const renderModelTags = (tags: string[]) => {
-    if (!tags || tags.length === 0) return null;
-
-    return (
-      <div className="flex flex-wrap gap-1 mt-0.5">
-        {tags.map((tag, idx) => {
-          // Choose color based on tag type
-          let bgColor = "bg-blue-400/20";
-          let textColor = "text-blue-500";
-
-          if (tag === "New") {
-            bgColor = "bg-green-400/20";
-            textColor = "text-green-500";
-          } else if (tag === "Experimental") {
-            bgColor = "bg-purple-400/20";
-            textColor = "text-purple-500";
-          } else if (tag === "Fast") {
-            bgColor = "bg-emerald-400/20";
-            textColor = "text-emerald-500";
-          } else if (tag === "Recommended") {
-            bgColor = "bg-blue-400/20";
-            textColor = "text-blue-500";
-          } else if (tag === "Advanced" || tag === "Powerful") {
-            bgColor = "bg-orange-400/20";
-            textColor = "text-orange-500";
-          } else if (tag === "Research" || tag === "Reasoning") {
-            bgColor = "bg-violet-400/20";
-            textColor = "text-violet-500";
-          }
-
-          return (
-            <span key={idx} className={`text-xs rounded-full px-2 py-0.5 ${bgColor} ${textColor}`}>
-              {tag}
-            </span>
-          );
-        })}
-      </div>
-    );
-  };
-
-  // Update the model selector UI with proper scrolling
-  const ModelSelector = () => (
-    <div className="absolute bottom-full mb-2 z-10 w-96 rounded-lg bg-[#1a1a1a] shadow-lg  border-2 border-[#7B7A7A] p-4">
-      <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
-        <div className="grid grid-cols-1 gap-2">
-          {MODEL_OPTIONS.map((model) => (
-            <button
-              key={model.id}
-              onClick={() => handleModelChange(model.id)}
-              className={`p-3 rounded-lg transition-all duration-200 ${selectedModel === model.id
-                ? "bg-[#683D24] border border-[#C9520D]"
-                : "bg-[#252525] hover:bg-[#323232] border border-transparent"
-                }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex items-center justify-center w-10 h-10 rounded-lg ${selectedModel === model.id
-                      ? "bg-[#C9520D]  text-white"
-                      : "bg-gray-700 text-gray-300"
-                      }`}
-                  >
-                    {model.icon}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-100 text-left">
-                      {model.name}
-                    </p>
-                    {model.tags && renderModelTags(model.tags)}
-                  </div>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  // previousUserMessage
 
   // Create a reusable error display component function
   const ErrorDisplay = ({ message, icon, actionText, onAction }: {
@@ -1649,217 +1218,75 @@ export default function Page() {
     );
   }, [savedChats, searchQuery]);
 
+  // Add a ref to store message elements by their ID
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Function to scroll to a specific message
+  const scrollToMessage = useCallback((messageId: string) => {
+    if (messageRefs.current[messageId]) {
+      messageRefs.current[messageId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+      setCurrentMessageId(messageId);
+    }
+  }, [setCurrentMessageId]);
+
+  // Add QuestionMessage component for user questions
+  function QuestionMessage({ content }: { content: string }) {
+    const lines = content.split('\n');
+    const isLong = lines.length > 3;
+    const [expanded, setExpanded] = useState(false);
+    const displayed = isLong && !expanded ? lines.slice(0, 3).join('\n') : content;
+    
+    return (
+      <div className={`inline-block max-w-[95vw] bg-[#1d1c1c] sm:max-w-[85vw] rounded-t-3xl rounded-br-3xl dark:text-[#c8c861] text-[#0c0c0c] overflow-hidden md:max-w-3xl ${expanded ? 'text-2xl' : 'text-5xl md:text-5xl'} tracking-tight p-3 md:p-4 font-mono`}>
+        <MarkdownRenderer content={displayed} />
+        {isLong && !expanded && (
+          <span 
+            onClick={() => setExpanded(true)} 
+            className="cursor-pointer text-blue-500 ml-2 text-base"
+          >
+            more..
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <main className={`${showWhiteboard ? "pr-[33.333%]" : ""} transition-all duration-300 text-base`}>
       {/* Optimized Top Navigation Bar with Mobile Dropdown */}
-      <nav
-        className={`sticky top-0 z-30 w-full bg-[#f8f8f8] dark:bg-[#0c0c0c] border-b border-gray-200 dark:border-[#f7eee332] backdrop-blur-md shadow-md transition-all duration-300 transform ${showNav || isMobile ? 'translate-y-0' : '-translate-y-full'
-          }`}
-      >
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between h-14 ">
-          <div className="flex items-center space-x-1">
-            <span className="text-black dark:text-white text-lg font-semibold">SphereAI</span>
-          </div>
-
-          {/* Desktop Actions - hidden on mobile */}
-          <div className="hidden md:flex items-center space-x-2">
-            <button
-              onClick={createNewChat}
-              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
-              aria-label="New Chat"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New</span>
-            </button>
-
-            <button
-              onClick={() => setShowChatSwitcher(true)}
-              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
-              aria-label="Switch Chat"
-            >
-              <ArrowLeftRight className="w-4 h-4" />
-              <span>Switch</span>
-            </button>
-
-            <button
-              onClick={handleClearHistory}
-              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
-              aria-label="Delete Chat"
-            >
-              <Trash className="h-4 w-4" />
-              <span>Delete</span>
-            </button>
-
-            <button
-              onClick={() => createPDF(messages)}
-              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
-              aria-label="Export to PDF"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Export</span>
-            </button>
-
-            <button
-              onClick={toggleWhiteboard}
-              className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm"
-              aria-label="Toggle Whiteboard"
-            >
-              <Paintbrush className="h-4 w-4" />
-              <span>Canvas</span>
-            </button>
-
-            <button
-              onClick={toggleDesignMode}
-              className={`flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors text-sm ${isDesignMode ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''
-                }`}
-              aria-label="Design Mode"
-            >
-              <Edit3 className="h-4 w-4" />
-              <span>{isDesignMode ? 'Exit Design' : 'Design'}</span>
-            </button>
-
-            {isDesignMode && (
-              <button
-                onClick={saveEditedMessages}
-                className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 bg-green-600 text-white hover:bg-green-700 transition-colors text-sm"
-                aria-label="Save Edits"
-              >
-                <Save className="h-4 w-4" />
-                <span>Save</span>
-              </button>
-            )}
-
-            <div className="flex items-center">
-              <ThemeToggle />
-            </div>
-          </div>
-
-          {/* Mobile Actions */}
-          <div className="flex md:hidden items-center space-x-2">
-            {/* Mobile dropdown toggle */}
-            <div className="relative">
-              <button
-                onClick={toggleMobileMenu}
-                className="flex items-center justify-center rounded-lg p-2 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-[#575757] transition-colors"
-                aria-label="Menu"
-                aria-expanded={showMobileMenu}
-              >
-                <div className="w-5 h-5 flex flex-col justify-between">
-                  <span className={`block h-0.5 w-full bg-current transition-all duration-300 ${showMobileMenu ? 'rotate-45 translate-y-1.5' : ''}`}></span>
-                  <span className={`block h-0.5 w-full bg-current transition-all duration-300 ${showMobileMenu ? 'opacity-0' : 'opacity-100'}`}></span>
-                  <span className={`block h-0.5 w-full bg-current transition-all duration-300 ${showMobileMenu ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
-                </div>
-              </button>
-
-              {/* Mobile dropdown menu */}
-              {showMobileMenu && (
-                <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-[#252525] ring-1 ring-black ring-opacity-5 z-50 origin-top-right">
-                  <div className="py-1" role="menu" aria-orientation="vertical">
-                    <button
-                      onClick={() => handleMenuAction(createNewChat)}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
-                      role="menuitem"
-                    >
-                      <Plus className="w-4 h-4" />
-                      New Chat
-                    </button>
-
-                    <button
-                      onClick={() => handleMenuAction(() => setShowChatSwitcher(true))}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
-                      role="menuitem"
-                    >
-                      <ArrowLeftRight className="w-4 h-4" />
-                      Switch Chat
-                    </button>
-
-                    <button
-                      onClick={() => handleMenuAction(handleClearHistory)}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
-                      role="menuitem"
-                    >
-                      <Trash className="h-4 w-4" />
-                      Delete Chat
-                    </button>
-
-                    <button
-                      onClick={() => handleMenuAction(() => createPDF(messages))}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
-                      role="menuitem"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Export PDF
-                    </button>
-
-                    <button
-                      onClick={() => handleMenuAction(toggleWhiteboard)}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232] flex items-center gap-2"
-                      role="menuitem"
-                    >
-                      <Paintbrush className="h-4 w-4" />
-                      Canvas
-                    </button>
-
-                    <button
-                      onClick={() => handleMenuAction(toggleDesignMode)}
-                      className={`w-full text-left px-4 py-2 text-sm ${isDesignMode
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#323232]'
-                        } flex items-center gap-2`}
-                      role="menuitem"
-                    >
-                      <Edit3 className="h-4 w-4" />
-                      {isDesignMode ? 'Exit Design Mode' : 'Design Mode'}
-                    </button>
-
-                    {isDesignMode && (
-                      <button
-                        onClick={() => handleMenuAction(saveEditedMessages)}
-                        className="w-full text-left px-4 py-2 text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 flex items-center gap-2"
-                        role="menuitem"
-                      >
-                        <Save className="h-4 w-4" />
-                        Save Changes
-                      </button>
-                    )}
-
-                    <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-                      <ThemeToggle />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Always keep at least one quick action visible */}
-            <button
-              onClick={createNewChat}
-              className="flex items-center justify-center rounded-xl bg-[#151515] dark:bg-[#323232] p-3 text-white hover:bg-[#48AAFF] transition-all duration-300 shadow-lg"
-              aria-label="New Chat"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Optional - visual indicator for nav accessibility when hidden */}
-      <div
-        className={`md:block hidden fixed top-0 left-0 right-0 h-2 z-20 bg-gradient-to-b from-gray-500/20 to-transparent transition-opacity duration-300 ${showNav ? 'opacity-0' : 'opacity-100'
-          }`}
+      <TopNav
+        createNewChat={createNewChat}
+        openChatSwitcher={() => setShowChatSwitcher(true)}
+        clearHistory={handleClearHistory}
+        exportPDF={() => createPDF(messages)}
+        toggleWhiteboard={toggleWhiteboard}
+        toggleDesignMode={toggleDesignMode}
+        isDesignMode={isDesignMode}
+        saveEdits={saveEditedMessages}
+        showNav={showNav}
+        isMobile={isMobile}
+        showMobileMenu={showMobileMenu}
+        toggleMobileMenu={toggleMobileMenu}
+        onMenuAction={handleMenuAction}
+        selectedModel={selectedModel}
+        showModelSelector={showModelSelector}
+        onModelChange={handleModelChange}
+        modelOptions={MODEL_OPTIONS}
       />
 
-      {/* Click outside to close mobile menu */}
-      {showMobileMenu && (
-        <div
-          className="fixed inset-0 z-20 bg-transparent"
-          onClick={() => setShowMobileMenu(false)}
-          aria-hidden="true"
+      {/* Add Timeline component */}
+      {messages.length > 0 && (
+        <Timeline
+          messages={messages}
+          onHoverChange={setTimelineHovered}
+          isMobile={isMobile}
+          onMessageClick={scrollToMessage}
+          currentMessageId={currentMessageId}
         />
       )}
-
-
-
 
       {showActionButtons && (
         <div
@@ -1914,7 +1341,7 @@ export default function Page() {
       <audio ref={audioRef} src={audioSrc || undefined} className="hidden" />
 
       {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] px-4">
+        <div className="flex flex-col  items-center justify-center h-[calc(100vh-56px)] px-4">
           <h1 className="text-[2.5em] sm:text-[3.5em] dark:text-[#f7eee3ca] text-[#1a1a1a] mb-4 font-['Instrument_Serif'] text-center leading-tight">What do you want to learn?</h1>
 
 
@@ -1923,7 +1350,7 @@ export default function Page() {
           <div className="w-full max-w-2xl px-4">
             <form onSubmit={onSubmit} className="w-full">
               <div className="group flex-col  w-full items-center   rounded-2xl dark:bg-[#ffffff] bg-[#f0f0f0] p-1  shadow-md transition-all duration-300">
-                <div className="flex relative flex-1  items-center overflow-hidden dark:bg-[#bebdbdde] bg-[#ffffff] rounded-xl py-3 sm:py-5 transition-all duration-300">
+                <div className="flex   relative flex-1  items-center overflow-hidden dark:bg-[#bebdbdde] bg-[#ffffff] rounded-xl py-3 sm:py-5 transition-all duration-300">
                   {!isVoiceMode ? (
                     <textarea
                       ref={textareaRef}
@@ -1934,7 +1361,7 @@ export default function Page() {
                         adjustTextareaHeight();
                       }}
                       onKeyDown={handleKeyDown}
-                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-['Instrument_Serif'] px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060]"
+                      className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent font-serif px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] "
                       rows={1}
                     />
                   ) : (
@@ -1970,7 +1397,7 @@ export default function Page() {
                           className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
                         // disabled={isLoading || isWebSearchLoading}
                         >
-                          {(isLoading || isStreaming || isWebSearchLoading) ? (
+                          {(isLoading || isStreaming ) ? (
                             <div className="relative h-5 w-5 flex items-center justify-center">
                               {/* Agentic workflow animation */}
                               <svg width="20" height="20" viewBox="0 0 50 50" className="animate-spin-slow">
@@ -2025,13 +1452,33 @@ export default function Page() {
                       </div>
                       <ChevronDown className="h-4 w-4" />
                     </button>
-                    {showModelSelector && <ModelSelector />}
+                    {showModelSelector && (
+                      <ModelSelector
+                        modelOptions={MODEL_OPTIONS}
+                        selectedModel={selectedModel}
+                        showModelSelector={showModelSelector}
+                        onModelChange={handleModelChange}
+                      />
+                    )}
                   </div>
                   <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
                     <Paintbrush className="h-6 w-6" />
                   </button>
-
-
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    id="pdf-upload-bottom"
+                    multiple
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="pdf-upload-bottom"
+                    className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200 cursor-pointer"
+                  >
+                    <Paperclip className="h-6 w-6" />
+                  </label>
                   <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" title="sphere Voice Assistant" aria-label={isVoiceMode ? "Exit Voice Mode" : "Activate sphere Voice Assistant"} onClick={toggleFullScreenVoiceMode} >
                     {isRecording ? (
                       <MicOff className="h-6 w-6" />
@@ -2047,7 +1494,6 @@ export default function Page() {
               {input.length > 0 && !isVoiceMode && (
                 <div className="mt-1.5 flex items-center justify-between px-1 text-xs dark:text-[#f7eee380] text-[#555555]">
                   <span>Press Enter to send, Shift + Enter for new line</span>
-                  {/* Removed the "/10000" context length */}
                   <span>{input.length}</span>
                 </div>
               )}
@@ -2068,9 +1514,9 @@ export default function Page() {
           </div>
         </div>
       ) : (
-        <div className={`relative mx-auto flex h-[calc(100vh-56px)] w-full flex-col ${showWhiteboard ? "md:w-full" : "md:w-2/3 w-full"}`}>
+        <div className={`relative mx-auto flex h-[calc(100vh-56px)] w-full p-2  flex-col ${showWhiteboard ? "md:w-full" : "md:w-2/3 w-full"} transition-all duration-300`}>
 
-          <div className="flex-1 space-y-4 overflow-y-auto px-3 sm:px-3 py-4 pb-24 md:space-y-6 md:px-0 md:py-6">
+          <div className="flex-1 space-y-4 overflow-y-auto  px-3 sm:px-3 py-4 pb-24 md:space-y-6 md:px-0 md:py-6">
             {messages.map((m, index) => {
               const previousUserMessage =
                 m.role === "assistant" &&
@@ -2078,9 +1524,11 @@ export default function Page() {
                   messages[index - 1]?.role === "user"
                   ? messages[index - 1]?.content ?? ""
                   : "";
+                  console.log(previousUserMessage)
               return m.role === "user" ? (
                 <div
                   key={m.id}
+                  ref={(el) => { messageRefs.current[m.id] = el; }} // Fix ref callback to not return a value
                   className="animate-slide-in group relative p-2 mx-2 flex flex-col md:mx-0"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
@@ -2093,16 +1541,22 @@ export default function Page() {
                         className="w-full min-h-[60px] bg-transparent resize-vertical p-2 focus:outline-none text-[1.4em] sm:text-[1.6em] md:text-[2.2em]"
                       />
                     </div>
-                  ) : ( //edit lo  user qurey
-                    <div className="flex justify-start">
-                      <div className="inline-block max-w-[95vw] sm:max-w-[85vw] text-[1.4em] sm:text-[1.6em] tracking-tight rounded-t-3xl rounded-br-3xl dark:bg-[#292929] bg-[#e0e6f0] dark:text-[#E8E8E6] text-[#0c0c0c] overflow-hidden md:max-w-xl md:p-4 md:text-[2.2em] p-3">
-                        <MarkdownRenderer content={m.content} />
-                      </div>
+                  ) : ( //user question
+                    <div className="flex justify-start ">
+                      <QuestionMessage content={m.content} />
                     </div>
                   )}
+                  <div className="mt-1 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => copyMessage(m.content, m.id)} className="p-1 rounded-full dark:text-white text-[#0c0c0c] hover:bg-[#646464] hover:text-[#48AAFF]">
+                      {copiedMessageId === m.id ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div key={m.id} className="animate-slide-in group relative flex flex-col md:mx-0">
+                <div
+                  key={m.id}
+                  className="animate-slide-in group relative flex flex-col md:mx-0"
+                >
                   {isDesignMode ? (
                     <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-hidden md:max-w-2xl rounded-xl p-4 dark:bg-[#1a1a1a] bg-[#f8f8f8]">
                       <textarea
@@ -2115,24 +1569,55 @@ export default function Page() {
                   ) : (
                     // Regular message display (non-design mode)
                     // the actual area in whivh the response is displayed
-                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[1.1rem] sm:text-[1.2rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.4rem]">
-                      <div className="animate-fade-in transition-opacity duration-500">
+                    <div className="relative max-w-[95vw] sm:max-w-[90vw] overflow-x-hidden rounded-xl p-1 text-[1.1rem] sm:text-[1.2rem] tracking-tight dark:text-[#E8E8E6] text-[#0c0c0c] md:max-w-2xl md:p-2 md:text-[1.4rem] ">
+
+                      
+                      <div className="flex-col w-full gap-4 justify-start cursor-pointer ">
+                         
+                        
+
+                        <div className="flex w-full gap-4 border-t-[1px] border-[#484848] justify-start cursor-pointer " >
+                        <div className="flex items-center     sm:p-3 dark:text-white text-[#0c0c0c] transition-colors   ">
+                          <button className="flex gap-2 text-base md:text-lg">
+                            <BookOpenText className="h-8 w-8" />
+                            <p>Response</p>
+                          </button>
+
+                        </div>
+                        <div className="flex  gap-2  items-center     sm:p-3 dark:text-[#6d6c6c] text-[#0c0c0c] transition-colors  dark:hover:text-[#e0e0e0] " onClick={() => handleSearchYouTube(lastQuery)}>
+                          <button  className="text-base md:text-lg">
+                            <Video className="h-8 w-8" />
+                          </button>
+                          <p>Video</p>
+                        </div>
+                        </div>
+
+
+
+
+                      </div>
+
+                      <div className="w-full h-3/2 bg-[#a5a4a4]"></div>
+
+
+
+                      <div className="flex animate-fade-in transition-opacity duration-500">
                         <MarkdownRenderer content={m.content} />
                       </div>
 
                       {/* Message action buttons... */}
                       <div className="mb-14 flex flex-wrap gap-1 sm:gap-2">
-                        <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
+                        {/* <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                           <button onClick={handleSearchWeb} className="text-base md:text-lg">
                             <Globe className="h-5 w-5" />
                           </button>
-                        </div>
-                        <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
+                        </div> */}
+                        {/* <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                           <button onClick={() => handleSearchYouTube(lastQuery)} className="text-base md:text-lg">
                             <Play className="h-5 w-5" />
                           </button>
-                        </div>
-                        {previousUserMessage && (
+                        </div> */}
+                        {/* {previousUserMessage && (
                           <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                             <button
                               onClick={() => regenerateQuery(previousUserMessage, m.id)}
@@ -2142,17 +1627,17 @@ export default function Page() {
                               {regenForMessageId === m.id ? " " : <RotateCw className="h-5 w-5" />}
                             </button>
                           </div>
-                        )}
-                        <div className="flex items-center justify-center rounded-full  p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
+                        )} */}
+                        <div className="flex items-center justify-center rounded-full   p-2 sm:p-3 dark:text-white text-[#0c0c0c] transition-colors dark:hover:bg-[#294A6D] hover:bg-[#e0e0e0] dark:hover:text-[#48AAFF] hover:text-[#48AAFF]">
                           <button onClick={() => copyMessage(m.content, m.id)} className="text-base md:text-lg">
                             {copiedMessageId === m.id ? (
                               <Check className="h-5 w-5 text-[#48AAFF]" />
                             ) : (
-                              <Copy className="h-5 w-5 dark:text-[#f7eee3] text-[#0c0c0c] hover:text-[#48AAFF]" />
+                              <Clipboard className="h-5 w-5 dark:text-[#f7eee3] text-[#0c0c0c] hover:text-[#48AAFF]" />
                             )}
                           </button>
                         </div>
-
+                        <div className="w-full h-[1px] bg-[#484848]"></div>
 
                       </div>
                     </div>
@@ -2174,7 +1659,7 @@ export default function Page() {
                       <span className="text-base">Sources</span>
                       <Info className="h-5 w-5" />
                     </button>
-                    <div className="absolute right-0 z-10 mt-2 hidden w-max max-w-[300px] rounded-lg border border-[#f7eee332] dark:bg-[#1a1a1a] bg-[#ffffff] p-2 shadow-xl group-hover:block">
+                    {/* <div className="absolute right-0 z-10 mt-2 hidden w-max max-w-[300px] rounded-lg border border-[#f7eee332] dark:bg-[#1a1a1a] bg-[#ffffff] p-2 shadow-xl group-hover:block">
                       {searchLinks.map((link, index) => (
                         <a
                           key={index}
@@ -2186,7 +1671,7 @@ export default function Page() {
                           {link}
                         </a>
                       ))}
-                    </div>
+                    </div> */}
                   </div>
                 </div>
                 <div className="prose prose-base md:prose-lg dark:prose-invert prose-gray max-w-none">
@@ -2199,9 +1684,10 @@ export default function Page() {
 
           {/* Bottom input or toolbar area */}
           <div
-            className={`flex sticky bottom-0 z-10 flex-row gap-3 items-center justify-center ${showWhiteboard ? "right-[33.333%]" : "right-0"
-              } left-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)/80] to-transparent p-2 sm:p-4 transition-all duration-300`}
-          >
+        className={`flex sticky bottom-0 z-10 flex-row  gap-3 items-center justify-center ${showWhiteboard ? "right-[33.333%]" : "right-0"} left-0
+          bg-gradient-to-b from-[var(--background)] via-[var(--background)/80] to-transparent
+          p-2 sm:p-4 transition-all duration-300`}
+      >
             {isDesignMode ? (
               // floating Toolbar for design mode
               <div className={`mx-auto w-auto ${showWhiteboard ? "max-w-full px-2 sm:px-4" : "max-w-2xl px-2 sm:px-3 md:px-0"}`}>
@@ -2213,8 +1699,19 @@ export default function Page() {
                 onSubmit={onSubmit}
                 className={`mx-auto w-full ${showWhiteboard ? "max-w-full px-2 sm:px-4" : "max-w-2xl px-2 sm:px-3 md:px-0"}`}
               >
-                <div className="group flex-col  w-full items-center  border border-[#383838] rounded-2xl dark:bg-[#ffffff] bg-[#f0f0f0] p-1  shadow-md transition-all duration-300">
-                  <div className="flex relative flex-1  items-center overflow-hidden dark:bg-[#bebdbdde] bg-[#ffffff] rounded-xl py-3 sm:py-5 transition-all duration-300">
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {attachments.map((file, idx) => (
+                      <div key={idx} className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow flex items-center space-x-2">
+                        <Paperclip className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                        <span className="truncate text-sm text-gray-700 dark:text-gray-300">{file.name}</span>
+                        <button type="button" onClick={() => removeAttachment(idx)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">X</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="group flex-col  w-full items-center   border border-[#383838] rounded-2xl dark:bg-[#ffffff] bg-[#f0f0f0] p-1  shadow-md transition-all duration-300">
+                  <div className="flex relative flex-1   items-center overflow-hidden dark:bg-[#bebdbdde] bg-[#ffffff] rounded-xl py-3 sm:py-5 transition-all duration-300">
                     {!isVoiceMode ? (
                       <textarea
                         ref={textareaRef}
@@ -2225,7 +1722,7 @@ export default function Page() {
                           adjustTextareaHeight();
                         }}
                         onKeyDown={handleKeyDown}
-                        className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] font-['Instrument_Serif']"
+                        className="max-h-[120px] min-h-[60px] flex-1 resize-none bg-transparent px-4 py-2 text-base md:text-lg dark:text-[#0c0c0c] text-[#0c0c0c] outline-none transition-all duration-200 dark:placeholder:text-[#0c0c0c] placeholder:text-[#606060] font-serif"
                         rows={1}
                       />
                     ) : (
@@ -2262,7 +1759,7 @@ export default function Page() {
                             className="p-3 rounded-full bg-[#0D0C0C] hover:bg-[#323232] text-[#f7eee3] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-xl-[#888787] box-shadow: 76px 2px 58px -95px rgba(136, 135, 135, 1) inset"
                           // disabled={isLoading || isWebSearchLoading}
                           >
-                            {(isLoading || isStreaming || isWebSearchLoading) ? (
+                            {(isLoading || isStreaming ) ? (
                               <div className="relative h-6 w-6 flex items-center justify-center">
                                 {/* Agentic workflow animation */}
                                 <svg width="24" height="24" viewBox="0 0 50 50" className="animate-spin-slow">
@@ -2339,12 +1836,33 @@ export default function Page() {
                         </div>
                         <ChevronDown className="h-4 w-4 ml-1" />
                       </button>
-                      {showModelSelector && <ModelSelector />}
+                      {showModelSelector && (
+                        <ModelSelector
+                          modelOptions={MODEL_OPTIONS}
+                          selectedModel={selectedModel}
+                          showModelSelector={showModelSelector}
+                          onModelChange={handleModelChange}
+                        />
+                      )}
                     </div>
                     <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" onClick={toggleWhiteboard}>
                       <Paintbrush className="h-6 w-6" />
                     </button>
-
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      id="pdf-upload-bottom"
+                      multiple
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="pdf-upload-bottom"
+                      className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200 cursor-pointer"
+                    >
+                      <Paperclip className="h-6 w-6" />
+                    </label>
                     <button type="button" className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200" title="sphere Voice Assistant" aria-label={isVoiceMode ? "Exit Voice Mode" : "Activate sphere Voice Assistant"} onClick={toggleFullScreenVoiceMode} >
                       {isRecording ? (
                         <MicOff className="h-6 w-6" />
@@ -2476,6 +1994,7 @@ export default function Page() {
                     const today = new Date();
                     return chatDate.toDateString() !== today.toDateString();
                   })
+                  .sort((a, b) => b.updatedAt - a.updatedAt) // Sort by increasing date (oldest to newest)
                   .map((chat) => (
                     <button
                       key={chat.id}

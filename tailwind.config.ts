@@ -91,6 +91,9 @@ module.exports = {
       animation: {
         'slide-in': 'slide-in 0.3s ease-out',
         'fade-in': 'fade-in 0.3s ease-out',
+        // Add new timeline animations
+        'timeline-appear': 'timeline-appear 0.3s ease-out forwards',
+        'dot-pulse': 'dot-pulse 1.5s ease-in-out infinite',
       },
       keyframes: {
         'slide-in': {
@@ -100,6 +103,15 @@ module.exports = {
         'fade-in': {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        // Add new timeline keyframes
+        'timeline-appear': {
+          '0%': { width: '12px', opacity: '0.5' },
+          '100%': { width: '192px', opacity: '1' },
+        },
+        'dot-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.7' },
+          '50%': { transform: 'scale(1.3)', opacity: '1' },
         },
       },
     },

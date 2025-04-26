@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, ArrowLeft, VolumeX } from 'lucide-react';
 
 interface VoiceModeProps {
@@ -34,6 +34,7 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onSubmit, onExit, lastResponse })
   console.log(aiResponse)
 
   // Update the conversation history when lastResponse changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (lastResponse && lastSubmittedText) {
       // Only add new responses if they're different from what's already in the history
@@ -60,7 +61,7 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onSubmit, onExit, lastResponse })
       setConversationHistory(updatedHistory as { role: 'user' | 'assistant'; text: string; }[]);
       setLastSubmittedText(null);
     }
-  }, [lastResponse, lastSubmittedText]);
+  }, [lastResponse, lastSubmittedText, conversationHistory]);
 
   // Cleanup effect
   useEffect(() => {
@@ -80,8 +81,9 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onSubmit, onExit, lastResponse })
     alert('Voice mode is still experimental and may make mistakes.');
   }, []);
 
-  // Function to speak the response
-  const speakResponse = async (text: string) => {
+  // Replace function declaration with useCallback to stabilize reference
+  const speakResponse = useCallback(async (text: string) => {
+    // Function to speak the response
     if (!text || isSpeaking) return;
     
     try {
@@ -187,7 +189,7 @@ const VoiceMode: React.FC<VoiceModeProps> = ({ onSubmit, onExit, lastResponse })
       
       setIsSpeaking(false);
     }
-  };
+  }, [isSpeaking]);
 
   // Extract browser speech synthesis to a separate function with better error handling
   const speakWithBrowserTTS = (text: string) => {
