@@ -180,36 +180,6 @@ export async function POST(req: Request): Promise<Response> {
             apiKey: process.env.PINECONE_API_KEY,
           });
 
-          // Get subject classification
-          const sub = `
-You are a query classifier. Your task is to categorize a given query into one of the following subjects and return only the corresponding subject tag. Do not include any other text,symbols or information in your response even the new line.
-The possible subject categories and their tags are:
-*   Compiler Design: cd
-*   Data Analysis and Algorithms: daa
-*   Data Communication and Networking/CRYPTOGRAPHY AND NETWORK SECURITY: ol
-*   Engineering Economics and Management: eem
-*   Chemistry : chemistry
-Analyze the following query: "${query}" and return the appropriate tag.
-          `;
-
-          let subjectResult;
-          try {
-            subjectResult = await withTimeout(
-              generateText({
-                model: groq("meta-llama/llama-4-scout-17b-16e-instruct"),
-                prompt: sub,
-                temperature: 0,
-              }),
-              10000, // 10 second timeout
-              "Subject classification timed out",
-            );
-            console.log("Subject classification result:", subjectResult.text);
-          } catch (subjectError) {
-            console.error("Error in subject classification:", subjectError);
-            // Default to a general subject if classification fails
-            subjectResult = { text: "daa" }; // Default to data analysis as fallback
-          }
-
           // Create embedding
           let queryEmbedding;
           try {
