@@ -59,8 +59,8 @@ import {
   ChevronDown,
   // Edit3, // Add Edit icon
   //Save, // Add Save icon
-  Mic,
-  MicOff,
+  // Mic,
+  // MicOff,
 } from "lucide-react";
 
 // import { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu";
@@ -646,13 +646,13 @@ export default function Page() {
 
   console.log(submitMessage);
 
-  // Add this function to toggle the full screen voice mode
-  const toggleFullScreenVoiceMode = () => {
-    setIsFullScreenVoiceMode((prev) => !prev);
-    if (!isVoiceMode) {
-      setIsVoiceMode(true);
-    }
-  };
+  // // Add this function to toggle the full screen voice mode
+  // const toggleFullScreenVoiceMode = () => {
+  //   setIsFullScreenVoiceMode((prev) => !prev);
+  //   if (!isVoiceMode) {
+  //     setIsVoiceMode(true);
+  //   }
+  // };
 
   // Handle exiting the voice mode
   const exitVoiceMode = () => {
@@ -1671,7 +1671,7 @@ export default function Page() {
                   >
                     <Paintbrush className="h-6 w-6" data-oid="wk.axir" />
                   </button>
-                  <input
+                  {/*<input
                     type="file"
                     accept="application/pdf"
                     id="pdf-upload-bottom"
@@ -1680,16 +1680,16 @@ export default function Page() {
                     onChange={handleFileChange}
                     className="hidden"
                     data-oid="mq02w1r"
-                  />
-
+                  />*/}
+                  {/*
                   <label
                     htmlFor="pdf-upload-bottom"
                     className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200 cursor-pointer"
                     data-oid="23f4d:q"
                   >
                     <Paperclip className="h-6 w-6" data-oid="5no_38c" />
-                  </label>
-                  <button
+                  </label>*/}
+                  {/*<button
                     type="button"
                     className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200"
                     title="sphere Voice Assistant"
@@ -1706,7 +1706,7 @@ export default function Page() {
                     ) : (
                       <Mic className="h-6 w-6" data-oid="wsqk9oi" />
                     )}
-                  </button>
+                  </button>*/}
                 </div>
               </div>
               {input.length > 0 && !isVoiceMode && (
@@ -2389,7 +2389,7 @@ export default function Page() {
                     >
                       <Paintbrush className="h-6 w-6" data-oid=":79y8qd" />
                     </button>
-                    <input
+                    {/*<input
                       type="file"
                       accept="application/pdf"
                       id="pdf-upload-bottom"
@@ -2398,16 +2398,16 @@ export default function Page() {
                       onChange={handleFileChange}
                       className="hidden"
                       data-oid="fl2eo2a"
-                    />
+                    />*/}
 
-                    <label
+                    {/*<label
                       htmlFor="pdf-upload-bottom"
                       className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200 cursor-pointer"
                       data-oid="79:d7kg"
                     >
                       <Paperclip className="h-6 w-6" data-oid="yrrvwef" />
-                    </label>
-                    <button
+                    </label>*/}
+                    {/*<button
                       type="button"
                       className="flex m-1 dark:bg-[#252525] bg-[#e2e2e2] dark:hover:bg-[#323232] hover:bg-[#d0d0d0] dark:text-[#f7eee3] text-[#0c0c0c] p-2 rounded-lg transition-colors duration-200"
                       title="sphere Voice Assistant"
@@ -2424,7 +2424,7 @@ export default function Page() {
                       ) : (
                         <Mic className="h-6 w-6" data-oid="dxrkrw-" />
                       )}
-                    </button>
+                    </button>*/}
                   </div>
                 </div>
 
@@ -2559,7 +2559,7 @@ export default function Page() {
                         switchToChat(chat.id);
                         setShowChatSwitcher(false);
                       }}
-                      className={`w-full flex items-start text-left py-2 px-3 rounded-xl transition-colors 
+                      className={`w-full flex items-start text-left py-2 px-3 rounded-xl transition-colors
                         ${
                           chatId === chat.id
                             ? "bg-white dark:bg-white shadow-sm"
@@ -2631,7 +2631,7 @@ export default function Page() {
                         switchToChat(chat.id);
                         setShowChatSwitcher(false);
                       }}
-                      className={`w-full flex items-start text-left py-2 px-3 rounded-xl transition-colors 
+                      className={`w-full flex items-start text-left py-2 px-3 rounded-xl transition-colors
                         ${
                           chatId === chat.id
                             ? "bg-white dark:bg-white shadow-sm"
