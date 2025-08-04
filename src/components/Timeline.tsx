@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Message } from '@ai-sdk/react';
+import React, { useState, useRef } from "react";
+import { Message } from "@ai-sdk/react";
 
 interface TimelineProps {
   messages: Message[];
@@ -9,24 +9,23 @@ interface TimelineProps {
   currentMessageId: string | null;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ 
-  messages, 
-  onHoverChange, 
+const Timeline: React.FC<TimelineProps> = ({
+  messages,
+  onHoverChange,
   isMobile,
   onMessageClick,
-  currentMessageId
+  currentMessageId,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isTimelineHovered, setIsTimelineHovered] = useState(false);
   const leaveTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const userMessages = messages.filter(m => m.role === 'user');
+  const userMessages = messages.filter((m) => m.role === "user");
 
   if (isMobile || userMessages.length === 0) return null;
 
-  const calcPos = (i: number) => userMessages.length < 2
-    ? 50
-    : 10 + (i / (userMessages.length - 1)) * 80;
+  const calcPos = (i: number) =>
+    userMessages.length < 2 ? 50 : 10 + (i / (userMessages.length - 1)) * 80;
 
   const handleMouseEnterContainer = () => {
     if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
@@ -58,28 +57,29 @@ const Timeline: React.FC<TimelineProps> = ({
       {isTimelineHovered && (
         <div
           className="absolute right-full mr-4 top-1/2 w-80 max-h-[50vh] overflow-auto p-4 text-black bg-[#181818] rounded-xl shadow-lg z-[10000]"
-          style={{ transform: 'translateY(-50%)' }}
+          style={{ transform: "translateY(-50%)" }}
           onMouseEnter={handleMouseEnterContainer}
           onMouseLeave={handleMouseLeaveContainer}
         >
           {/* <h3 className="mb-2 font-medium text-lg text-gray-900 dark:text-gray-100">All Questions</h3> */}
           <ul className="space-y-2">
-            {userMessages.map(msg => {
+            {userMessages.map((msg) => {
               const isActive = msg.id === currentMessageId;
               return (
                 <li
                   key={msg.id}
                   onClick={() => handleMessageClick(msg.id)}
-                  className={`cursor-pointer text-md font-medium hover:text-[#0c0c0c] hover:bg-gray-100 p-2 rounded ${isActive ? ' dark:text-[#3c5fb0] font-bold' : 'text-gray-500 '}`}
+                  className={`cursor-pointer text-md font-medium hover:text-[#0c0c0c] hover:bg-gray-100 p-2 rounded ${isActive ? " dark:text-[#3c5fb0] font-bold" : "text-gray-500 "}`}
                 >
-                  {msg.content.length > 80 ? msg.content.substring(0,80) + '...' : msg.content}
+                  {msg.content.length > 80
+                    ? msg.content.substring(0, 80) + "..."
+                    : msg.content}
                 </li>
               );
             })}
           </ul>
         </div>
       )}
-
 
       {/* Circular markers */}
       <div className="relative w-full h-full overflow-visible">
@@ -92,16 +92,20 @@ const Timeline: React.FC<TimelineProps> = ({
               key={msg.id}
               className="absolute right-5 transform -translate-y-1/2 cursor-pointer flex items-center justify-center w-8 h-1"
               style={{ top: topPosition }}
-              onMouseEnter={() => { if (leaveTimeout.current) clearTimeout(leaveTimeout.current); setHoveredIndex(idx); }}
+              onMouseEnter={() => {
+                if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
+                setHoveredIndex(idx);
+              }}
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={() => handleMessageClick(msg.id)}
             >
-              
               <div
                 className={`rounded-sm w-8 h-1 transition-all duration-300 ease-out transform
-                           ${isHovered
-                             ? 'w-8 h-1 bg-gradient-to-r from-blue-500 m-2 to-indigo-500 dark:from-blue-400 dark:to-indigo-400 scale-125 shadow-lg shadow-blue-500/30'
-                             : 'w-8 h-1 bg-gray-400 dark:bg-[#373737] group-hover:w-2.5 group-hover:h-2.5'}`}
+                           ${
+                             isHovered
+                               ? "w-8 h-1 bg-gradient-to-r from-blue-500 m-2 to-indigo-500 dark:from-blue-400 dark:to-indigo-400 scale-125 shadow-lg shadow-blue-500/30"
+                               : "w-8 h-1 bg-gray-400 dark:bg-[#373737] group-hover:w-2.5 group-hover:h-2.5"
+                           }`}
               />
 
               {/* Preview box - cleaner minimal design */}
@@ -111,7 +115,7 @@ const Timeline: React.FC<TimelineProps> = ({
                              rounded-lg shadow-sm border border-gray-100 dark:border-gray-800
                              text-sm text-gray-800 dark:text-gray-200 whitespace-normal break-words 
                              transition-all duration-150 z-[10000]"
-                  style={{ top: '50%', transform: 'translateY(-50%)' }}
+                  style={{ top: "50%", transform: "translateY(-50%)" }}
                   onMouseEnter={handleMouseEnterContainer}
                   onMouseLeave={handleMouseLeaveContainer}
                 >

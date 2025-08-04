@@ -1,7 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 
 declare global {
-  interface Window { typograms?: { create: (source: string, zoom?: number, debug?: boolean) => SVGSVGElement }; }
+  interface Window {
+    typograms?: {
+      create: (source: string, zoom?: number, debug?: boolean) => SVGSVGElement;
+    };
+  }
 }
 
 interface TypogramRendererProps {
@@ -10,13 +14,21 @@ interface TypogramRendererProps {
   debug?: boolean;
 }
 
-const TypogramRenderer: React.FC<TypogramRendererProps> = ({ source, zoom = 0.3, debug = false }) => {
+const TypogramRenderer: React.FC<TypogramRendererProps> = ({
+  source,
+  zoom = 0.3,
+  debug = false,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.typograms && containerRef.current) {
+    if (
+      typeof window !== "undefined" &&
+      window.typograms &&
+      containerRef.current
+    ) {
       const svg = window.typograms.create(source, zoom, debug);
-      containerRef.current.innerHTML = '';
+      containerRef.current.innerHTML = "";
       containerRef.current.appendChild(svg);
     }
   }, [source, zoom, debug]);
