@@ -803,11 +803,11 @@ export default function Page() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    setAttachments((prev) => [...prev, ...files]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const files = e.target.files ? Array.from(e.target.files) : [];
+  //   setAttachments((prev) => [...prev, ...files]);
+  //   if (fileInputRef.current) fileInputRef.current.value = "";
+  // };
 
   const sendPdfAttachment = async () => {
     if (attachments.length === 0) return;
